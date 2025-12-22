@@ -12,22 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
-from lerobot.cameras.configs import CameraConfig
+from lerobot_camera_ros2.components.common import BaseComponent
+from numpy.typing import NDArray
+from sensor_msgs.msg import Image
+import numpy as np
+from lerobot_camera_ros2.config_ros2_camera import ROS2CameraConfig
 
-@CameraConfig.register_subclass("ros2_camera")
-@dataclass
-class ROS2CameraConfig(CameraConfig):
-    """Configuration for a ROS 2 camera.
-        
-    Attributes:
-        topic (str): The topic on which the camera image is published.
-        is_compressed (bool): Whether the image is compressed.
-        node_name (str): The name of the ROS 2 node.
-    """
-    topic: str = "/camera/image_raw"
+class ImageComponent(BaseComponent):
+   def __init__(self, config: ROS2CameraConfig):
+      super().__init__(config, Image)
+   
+   def msg_to_data(self, msg: Image) -> NDArray[np.uint8]:
+      return np.frombuffer(msg.data, dtype=np.uint8)
 
-    is_compressed: bool = False
-
-    node_name: str = "lerobot_camera"
-
+    

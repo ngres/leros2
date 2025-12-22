@@ -451,6 +451,14 @@ wheels = [
 ]
 
 [[package]]
+name = "cv-bridge"
+version = "1.13.0.post0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6f/ec/343877b143bd20e749e9530cc4721331f77f777ef0939bd78409127a19d9/cv_bridge-1.13.0.post0-py2.py3-none-any.whl", hash = "sha256:4e345eed822024963cab9e892f407c980e8578b0ab05f081d9ee25fb2e77996c", size = 6058, upload-time = "2024-01-31T09:16:24.66Z" },
+]
+
+[[package]]
 name = "datasets"
 version = "4.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -954,6 +962,18 @@ wheels = [
 name = "lerobot-camera-ros2"
 version = "0.1.0"
 source = { editable = "packages/camera" }
+dependencies = [
+    { name = "cv-bridge" },
+    { name = "lerobot" },
+    { name = "lerobot-common-ros2" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cv-bridge", specifier = ">=1.13.0.post0" },
+    { name = "lerobot" },
+    { name = "lerobot-common-ros2", editable = "packages/common" },
+]
 
 [[package]]
 name = "lerobot-common-ros2"

@@ -12,22 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
-from lerobot.cameras.configs import CameraConfig
+from lerobot_camera_ros2.components.common import BaseComponent
+from numpy.typing import NDArray
+from sensor_msgs.msg import CompressedImage
+import numpy as np
+from lerobot_camera_ros2.config_ros2_camera import ROS2CameraConfig
+from cv_bridge import CvBridge
 
-@CameraConfig.register_subclass("ros2_camera")
-@dataclass
-class ROS2CameraConfig(CameraConfig):
-    """Configuration for a ROS 2 camera.
-        
-    Attributes:
-        topic (str): The topic on which the camera image is published.
-        is_compressed (bool): Whether the image is compressed.
-        node_name (str): The name of the ROS 2 node.
-    """
-    topic: str = "/camera/image_raw"
 
-    is_compressed: bool = False
+class CompressedImageComponent(BaseComponent):
+    def __init__(self, config: ROS2CameraConfig):
+        super().__init__(config, CompressedImage)
 
-    node_name: str = "lerobot_camera"
-
+    def msg_to_data(self, msg: CompressedImage) -> NDArray[np.uint8]:
+        bridge = CvBridge()
+        return bridge.compressed_imgmsg_to_cv2(msg)

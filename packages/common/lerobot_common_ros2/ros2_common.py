@@ -52,7 +52,7 @@ class ROS2Common(Generic[T, B]):
     def _init_components(self):
         pass
 
-    def connect(self, calibrate: bool = True) -> None:
+    def connect(self) -> None:
         if self.is_connected:
             raise DeviceAlreadyConnectedError(f"{self} already connected")
 
@@ -60,29 +60,21 @@ class ROS2Common(Generic[T, B]):
             rclpy.init()
 
         self._node = rclpy.create_node(self.config.node_name)
+
+        for comp in self._components.values():
+            comp.connect(self._node)
+
         self._executor = MultiThreadedExecutor()
         self._executor.add_node(self._node)
         self._spin_thread = threading.Thread(target=self._executor.spin, daemon=True)
         self._spin_thread.start()
 
-        for comp in self._components.values():
-            comp.connect(self._node)
-
-        self.is_connected = True
-        self.configure()
+        self._is_connected = True
         logger.info(f"{self} connected.")
 
-    def reset(self):
-        if self._gripper:
-            self._gripper.reset_gripper()
-
     def disconnect(self) -> None:
-        if not self.is_connected:
+        if not self._is_connected:
             return
-
-        if self._gripper is not None:
-            self._gripper.stop()
-            self._gripper = None
 
         for comp in self._components.values():
             comp.disconnect()
@@ -96,28 +88,9 @@ class ROS2Common(Generic[T, B]):
         if rclpy.ok():
             rclpy.shutdown()
 
-        self.is_connected = False
+        self._is_connected = False
         logger.info(f"{self} disconnected.")
-
-    def calibrate(self) -> None:
-        pass
-
-    @abstractmethod
-    def configure(self) -> None:
-        """
-        Apply any one-time or runtime configuration to the teleoperator.
-        This may include setting motor parameters, control modes, or initial state.
-        """
-        pass
-
-    @property
-    def is_calibrated(self) -> bool:
-        return True
 
     @property
     def is_connected(self) -> bool:
         return self._is_connected
-
-    @is_connected.setter
-    def is_connected(self, value: bool) -> None:
-        self._is_connected = value
