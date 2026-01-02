@@ -1,0 +1,18 @@
+[project]
+name = "lerobot_robot_ure"
+version = "0.1.0"
+description = "URe series LeRobot ROS2 interface"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["leros2"]
+
+[tool.uv.sources]
+leros2 = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.9.10,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "lerobot_robot_ure"
+module-root = ""

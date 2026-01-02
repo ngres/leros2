@@ -1,0 +1,6 @@
+ros-${ROS_DISTRO}-rmw-cyclonedds-cpp
+ros-${ROS_DISTRO}-ros2bag
+ros-${ROS_DISTRO}-rosbag2-transport
+ros-${ROS_DISTRO}-rosbag2-storage-mcap
+ros-${ROS_DISTRO}-ur-client-library
+ros-${ROS_DISTRO}-ur
