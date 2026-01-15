@@ -27,8 +27,7 @@ leros2-convert \
     --input_bag=/path/to/your/rosbag \
     --task_topic=/task \
     --clock_topic=/camera/image_raw \
-    --teleop.type=ure \
-    --teleop.id=blue
+    --teleop.type=pose
 ```
 """
 
@@ -253,7 +252,7 @@ def record_loop(
             is_recording = True
             continue
 
-        # only record a new frame when the clock topic is received
+        # only record a new frame when the clock topic is received or the FPS threshold is reached
         if not is_recording or topic != clock_topic:
             continue
 

@@ -13,7 +13,9 @@ resolution-markers = [
 [manifest]
 members = [
     "lerobot-robot-ure",
+    "lerobot-teleoperator-pose",
     "leros2",
+    "leros2-record-utils",
 ]
 
 [[package]]
@@ -971,6 +973,17 @@ dependencies = [
 requires-dist = [{ name = "leros2", editable = "." }]
 
 [[package]]
+name = "lerobot-teleoperator-pose"
+version = "0.1.0"
+source = { editable = "examples/lerobot_teleoperator_pose" }
+dependencies = [
+    { name = "leros2" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "leros2", editable = "." }]
+
+[[package]]
 name = "leros2"
 version = "0.1.0"
 source = { editable = "." }
@@ -978,6 +991,7 @@ dependencies = [
     { name = "black" },
     { name = "cv-bridge" },
     { name = "lerobot" },
+    { name = "numpy" },
 ]
 
 [package.metadata]
@@ -985,7 +999,13 @@ requires-dist = [
     { name = "black", specifier = ">=25.11.0" },
     { name = "cv-bridge", specifier = ">=1.13.0.post0" },
     { name = "lerobot", specifier = ">=0.4.2" },
+    { name = "numpy", specifier = ">=2.2.6" },
 ]
+
+[[package]]
+name = "leros2-record-utils"
+version = "0.1.0"
+source = { virtual = "examples/leros2_record_utils" }
 
 [[package]]
 name = "markupsafe"

@@ -8,6 +8,7 @@ dependencies = [
     "black>=25.11.0",
     "cv-bridge>=1.13.0.post0",
     "lerobot>=0.4.2",
+    "numpy>=2.2.6",
 ]
 
 [tool.uv.workspace]
