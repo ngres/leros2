@@ -1,7 +1,0 @@
-[project]
-name = "leros2_record_utils"
-version = "0.1.0"
-description = "ROS 2 record utils for LeRobot ROS2 interface"
-readme = "README.md"
-requires-python = ">=3.10"
-dependencies = []
