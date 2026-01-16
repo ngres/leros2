@@ -1,0 +1,14 @@
+robot:
+  type: ure
+
+teleop:
+  type: pose
+
+dataset:
+  repo_id: "ngres/leros2-test"
+  single_task: "Pick the Lego block and drop it in the box on the right."
+  fps: 30
+  video: true
+  push_to_hub: false
+
+

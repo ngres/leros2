@@ -70,3 +70,10 @@ class ROS2Teleoperator(
             action.update(comp.get_state())
 
         return action
+
+    def send_feedback(self, feedback: dict[str, Any]) -> None:
+        return None
+
+    @property
+    def feedback_features(self) -> dict[str, type]:
+        return {}

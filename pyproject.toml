@@ -3,10 +3,11 @@ name = "leros2"
 version = "0.1.0"
 description = "LeRobot ROS2 interfaces"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "black>=25.11.0",
     "cv-bridge>=1.13.0.post0",
+    "draccus>=0.10.0",
     "lerobot>=0.4.2",
     "numpy>=2.2.6",
 ]
@@ -21,3 +22,6 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 module-name = "leros2"
 module-root = "src"
+
+[project.scripts]
+leros2-convert = "leros2.scripts.convert:main"

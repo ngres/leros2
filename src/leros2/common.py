@@ -129,3 +129,17 @@ class ROS2Common(Generic[ConfigT, ComponentT]):
     @property
     def is_connected(self) -> bool:
         return self._is_connected
+
+    def calibrate(self):
+        pass
+
+    def configure(self):
+        pass
+
+    @property
+    def is_calibrated(self) -> bool:
+        return True
+
+    @property
+    def is_configured(self) -> bool:
+        return True

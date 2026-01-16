@@ -18,9 +18,11 @@ from typing import Any
 import numpy as np
 from lerobot.utils.rotation import Rotation
 from leros2.components.common import ActionComponentConfig, ActionComponent
+from leros2.components.common.base import BaseComponentConfig
 
 
 @dataclass
+@BaseComponentConfig.register_subclass('pose_action')
 class PoseActionComponentConfig(ActionComponentConfig):
     name: str
 

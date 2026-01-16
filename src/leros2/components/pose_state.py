@@ -1,4 +1,4 @@
-# Copyright 2025 Nicolas Gres
+# Copyright 2026 Nicolas Gres
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,21 +13,23 @@
 # limitations under the License.
 
 from leros2.components.common import StateComponent
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import PoseStamped
 from typing import Any
 import numpy as np
 from leros2.components.common import StateComponentConfig
+from leros2.components.common.base import BaseComponentConfig
 from dataclasses import dataclass
 
 
 @dataclass
+@BaseComponentConfig.register_subclass('pose_state')
 class PoseStateComponentConfig(StateComponentConfig):
     name: str
 
 
-class PoseStateComponent(StateComponent[PoseStateComponentConfig, Pose]):
+class PoseStateComponent(StateComponent[PoseStateComponentConfig, PoseStamped]):
     def __init__(self, config: PoseStateComponentConfig):
-        super().__init__(config, Pose)
+        super().__init__(config, PoseStamped)
 
     def _quat_to_euler(self, quat: np.ndarray) -> np.ndarray:
         x, y, z, w = quat
@@ -43,22 +45,22 @@ class PoseStateComponent(StateComponent[PoseStateComponentConfig, Pose]):
             f"{self._config.name}.rot": np.ndarray,  # shape (3,)
         }
 
-    def to_value(self, msg: Pose) -> dict[str, Any]:
+    def to_value(self, msg: PoseStamped) -> dict[str, Any]:
         return {
             f"{self._config.name}.pos": np.array(
                 [
-                    msg.position.x,
-                    msg.position.y,
-                    msg.position.z,
+                    msg.pose.position.x,
+                    msg.pose.position.y,
+                    msg.pose.position.z,
                 ]
             ),
             f"{self._config.name}.rot": self._quat_to_euler(
                 np.array(
                     [
-                        msg.orientation.x,
-                        msg.orientation.y,
-                        msg.orientation.z,
-                        msg.orientation.w,
+                        msg.pose.orientation.x,
+                        msg.pose.orientation.y,
+                        msg.pose.orientation.z,
+                        msg.pose.orientation.w,
                     ]
                 )
             ),

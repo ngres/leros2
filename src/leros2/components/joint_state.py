@@ -15,6 +15,7 @@
 from typing import Any
 from leros2.components.common import StateComponent, StateComponentConfig
 from trajectory_msgs.msg import JointTrajectory
+from leros2.components.common.base import BaseComponentConfig
 from dataclasses import dataclass
 import math
 
@@ -34,6 +35,7 @@ class JointConfig:
 
 
 @dataclass
+@BaseComponentConfig.register_subclass('joint_state')
 class JointStateComponentConfig(StateComponentConfig):
     joints: list[JointConfig]
 

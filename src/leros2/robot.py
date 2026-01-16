@@ -137,3 +137,17 @@ class ROS2Robot(ROS2Common[ROS2RobotConfig, StateComponent | ActionComponent], R
             1 if isinstance(component, ImageBaseComponent) else 0
             for component in self._components
         )
+
+    def calibrate(self):
+        pass
+
+    def configure(self):
+        pass
+
+    @property
+    def is_calibrated(self) -> bool:
+        return True
+
+    @property
+    def is_connected(self) -> bool:
+        return self._is_connected

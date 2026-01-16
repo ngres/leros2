@@ -17,10 +17,12 @@ from typing import Any
 from leros2.components.common.base_image import ImageBaseComponent
 from cv_bridge import CvBridge
 from leros2.components.image import ImageComponentConfig
+from leros2.components.common.base import BaseComponentConfig
 from sensor_msgs.msg import CompressedImage
 
 
 @dataclass
+@BaseComponentConfig.register_subclass('compressed_image')
 class CompressedImageComponentConfig(ImageComponentConfig):
     pass
 

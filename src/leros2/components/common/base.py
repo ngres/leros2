@@ -13,13 +13,14 @@
 # limitations under the License.
 
 from abc import abstractmethod, ABC
-from typing import Generic, TypeVar, Protocol
+from typing import Generic, TypeVar
 from rclpy.node import Node
 from dataclasses import dataclass
+from draccus import ChoiceRegistry
 
 
 @dataclass
-class BaseComponentConfig(Protocol):
+class BaseComponentConfig(ChoiceRegistry):
     topic: str
 
 

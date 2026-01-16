@@ -17,9 +17,11 @@ from leros2.components.common import ActionComponent, ActionComponentConfig
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from leros2.components.joint_state import JointConfig
 from dataclasses import dataclass
+from leros2.components.common.base import BaseComponentConfig
 
 
 @dataclass(kw_only=True)
+@BaseComponentConfig.register_subclass('joint_action')
 class JointActionComponentConfig(ActionComponentConfig):
     joints: list[JointConfig]
 

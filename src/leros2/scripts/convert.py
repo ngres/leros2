@@ -24,9 +24,8 @@ Example:
 leros2-convert \
     --robot.type=ure \
     --dataset.repo_id=<my_username>/<my_dataset_name> \
-    --input_bag=/path/to/your/rosbag \
+    --bag_path=/path/to/your/rosbag \
     --task_topic=/task \
-    --clock_topic=/camera/image_raw \
     --teleop.type=pose
 ```
 """
@@ -34,7 +33,7 @@ leros2-convert \
 from lerobot.teleoperators.utils import make_teleoperator_from_config
 from lerobot.robots.utils import make_robot_from_config
 
-from rosidl_runtime_py.utilities import get_message
+from rosidl_runtime_py.utilities import get_message  # ty:ignore[unresolved-import]
 
 from leros2.teleoperator import ROS2Teleoperator
 from leros2.robot import ROS2Robot
@@ -128,23 +127,23 @@ class DatasetRecordConfig:
 @dataclass
 class RecordConfig:
     # Path to the bag file to convert
-    input_bag: str
+    bag_path: str
     # ROS 2 Robot
     robot: RobotConfig
     # Dataset config
     dataset: DatasetRecordConfig
     # ROS 2 Teleoperator
     teleop: TeleoperatorConfig
-    # ROS 2 Clock topic
-    clock_topic: str = "lerobot_clock"
     # ROS 2 Event topic
     event_topic: str = "lerobot_event"
     # ROS 2 Task topic
     task_topic: str | None = None
+    # ROS 2 Clock topic (used to capture lerobot frames - if None, messages will be sampled at a fixed FPS rate)
+    clock_topic: str | None = None
     # Display all cameras on screen
     display_data: bool = False
     # Use vocal synthesis to read events.
-    play_sounds: bool = True
+    play_sounds: bool = False
     # Resume recording on an existing dataset.
     resume: bool = False
 
@@ -158,7 +157,7 @@ def typename(topic_name, topic_types):
 
 @safe_stop_image_writer
 def record_loop(
-    input_bag: str,
+    bag_path: str,
     robot: ROS2Robot,
     teleop: ROS2Teleoperator,
     teleop_action_processor: RobotProcessorPipeline[
@@ -167,11 +166,11 @@ def record_loop(
     robot_observation_processor: RobotProcessorPipeline[
         RobotObservation, RobotObservation
     ],  # runs after robot
-    dataset: LeRobotDataset | None = None,
+    dataset: LeRobotDataset,
     display_data: bool = False,
-    clock_topic: str = "lerobot_clock",
     event_topic: str = "lerobot_event",
     task_topic: str | None = None,
+    clock_topic: str | None = None,
     default_task: str | None = None,
 ):
     """
@@ -183,7 +182,7 @@ def record_loop(
     The `event_topic` is used to read events such as `"exit_early"` and `"rerecord_episode"`.
 
     Args:
-        input_bag: Path to the bag file to record.
+        bag_path: Path to the bag file to record.
         robot: ROS2 robot to record.
         teleop: ROS2 teleoperator to record.
         teleop_action_processor: ROS2 teleoperator action processor.
@@ -197,7 +196,7 @@ def record_loop(
     """
     reader = rosbag2_py.SequentialReader()
     reader.open(
-        rosbag2_py.StorageOptions(uri=input_bag, storage_id="mcap"),
+        rosbag2_py.StorageOptions(uri=bag_path, storage_id="mcap"),
         rosbag2_py.ConverterOptions(
             input_serialization_format="cdr", output_serialization_format="cdr"
         ),
@@ -218,6 +217,8 @@ def record_loop(
     is_recording = task_topic is None
     is_saved = False
 
+    delta_time = 0.0
+
     while reader.has_next():
         topic, data, timestamp = reader.read_next()
         msg_type = get_message(typename(topic, topic_types))
@@ -229,15 +230,16 @@ def record_loop(
         if topic == event_topic:
             match msg.data:
                 case "exit_early":
-                    if dataset is not None:
-                        dataset.save_episode()
+                    dataset.save_episode()
                     is_recording = False
                     is_saved = True
+                    delta_time = 0.0
                     continue
                 case "rerecord_episode":
                     if dataset is not None:
                         dataset.clear_episode_buffer()
                     is_recording = True
+                    delta_time = 0.0
                     continue
                 case _:
                     continue
@@ -245,16 +247,26 @@ def record_loop(
         if topic == task_topic:
             # receive a new task to record
             task = msg.data
-            if is_recording and not is_saved and dataset is not None:
+            if is_recording and not is_saved:
                 # save the previous episode
                 dataset.save_episode()
                 is_saved = True
             is_recording = True
+            delta_time = 0.0
             continue
 
         # only record a new frame when the clock topic is received or the FPS threshold is reached
-        if not is_recording or topic != clock_topic:
+        if not is_recording:
             continue
+
+        if clock_topic is not None and topic != clock_topic:
+            continue
+
+        if clock_topic is not None:
+            delta_time += (timestamp - topic_data[clock_topic].header.stamp).to_sec()
+            if delta_time < 1.0 / dataset.fps:
+                continue
+            delta_time = 0.0
 
         # Get robot observation
         obs = robot.get_state_from_topics(topic_data)
@@ -366,10 +378,9 @@ def record(cfg: RecordConfig) -> LeRobotDataset:
         if teleop is not None:
             teleop.connect()
 
-        listener, events = init_keyboard_listener()
-
         with VideoEncodingManager(dataset):
             record_loop(
+                bag_path=cfg.bag_path,
                 robot=robot,
                 teleop=teleop,
                 teleop_action_processor=teleop_action_processor,
