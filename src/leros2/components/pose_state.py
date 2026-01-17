@@ -36,32 +36,31 @@ class PoseStateComponent(StateComponent[PoseStateComponentConfig, PoseStamped]):
         roll = np.arctan2(2 * (w * x + y * z), 1 - 2 * (x**2 + y**2))
         pitch = np.arcsin(np.clip(2 * (w * y - z * x), -1.0, 1.0))
         yaw = np.arctan2(2 * (w * z + x * y), 1 - 2 * (y**2 + z**2))
-        return np.array([roll, pitch, yaw])
+        return [roll, pitch, yaw]
 
     @property
     def features(self) -> dict[str, type]:
         return {
-            f"{self._config.name}.pos": np.ndarray,  # shape (3,)
-            f"{self._config.name}.rot": np.ndarray,  # shape (3,)
+            f"{self._config.name}_x.pos": float,
+            f"{self._config.name}_x.pos": float,
+            f"{self._config.name}_z.pos": float,
+            f"{self._config.name}_roll.pos": float,
+            f"{self._config.name}_pitch.pos": float,
+            f"{self._config.name}_yaw.pos": float,
         }
 
     def to_value(self, msg: PoseStamped) -> dict[str, Any]:
+        roll, pitch, yaw = self._quat_to_euler([
+            msg.pose.orientation.x,
+            msg.pose.orientation.y,
+            msg.pose.orientation.z,
+            msg.pose.orientation.w,
+        ])
         return {
-            f"{self._config.name}.pos": np.array(
-                [
-                    msg.pose.position.x,
-                    msg.pose.position.y,
-                    msg.pose.position.z,
-                ]
-            ),
-            f"{self._config.name}.rot": self._quat_to_euler(
-                np.array(
-                    [
-                        msg.pose.orientation.x,
-                        msg.pose.orientation.y,
-                        msg.pose.orientation.z,
-                        msg.pose.orientation.w,
-                    ]
-                )
-            ),
+            f"{self._config.name}_x.pos": msg.pose.position.x,
+            f"{self._config.name}_x.pos": msg.pose.position.y,
+            f"{self._config.name}_z.pos": msg.pose.position.z,
+            f"{self._config.name}_roll.pos": roll,
+            f"{self._config.name}_pitch.pos": pitch,
+            f"{self._config.name}_yaw.pos": yaw,
         }

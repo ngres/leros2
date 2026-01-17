@@ -168,7 +168,7 @@ def record_loop(
     ],  # runs after robot
     dataset: LeRobotDataset,
     display_data: bool = False,
-    event_topic: str = "lerobot_event",
+    event_topic: str = "/lerobot_event",
     task_topic: str | None = None,
     clock_topic: str | None = None,
     default_task: str | None = None,
@@ -205,19 +205,26 @@ def record_loop(
     topic_types = reader.get_all_topics_and_types()
 
     topics = [
+        event_topic,
         *robot.subscription_topics,
-        *(teleop.subscription_topics if teleop is not None else []),
+        *teleop.subscription_topics,
     ]
+    if task_topic is not None:
+        topics.append(task_topic)
+    if clock_topic is not None:
+        topics.append(clock_topic)
     reader.set_filter(rosbag2_py.StorageFilter(topics=topics))
 
     topic_data: dict[str, Any] = {}
 
     task = default_task
 
-    is_recording = task_topic is None
+    is_recording = False
     is_saved = False
 
     delta_time = 0.0
+
+    has_frame = False
 
     while reader.has_next():
         topic, data, timestamp = reader.read_next()
@@ -230,7 +237,9 @@ def record_loop(
         if topic == event_topic:
             match msg.data:
                 case "exit_early":
-                    dataset.save_episode()
+                    if is_recording and has_frame:
+                        dataset.save_episode()
+                        has_frame = False
                     is_recording = False
                     is_saved = True
                     delta_time = 0.0
@@ -247,17 +256,22 @@ def record_loop(
         if topic == task_topic:
             # receive a new task to record
             task = msg.data
-            if is_recording and not is_saved:
+            if is_recording and not is_saved and has_frame:
                 # save the previous episode
                 dataset.save_episode()
                 is_saved = True
+                has_frame = False
             is_recording = True
             delta_time = 0.0
             continue
 
         # only record a new frame when the clock topic is received or the FPS threshold is reached
         if not is_recording:
-            continue
+            if task_topic is None and all(t in topic_data for t in topics if t != event_topic):
+                # if no task_topic is provided, recording starts when all topics are saturated
+                is_recording = True
+            else:
+                continue
 
         if clock_topic is not None and topic != clock_topic:
             continue
@@ -274,10 +288,9 @@ def record_loop(
         # Applies a pipeline to the raw robot observation, default is IdentityProcessor
         obs_processed = robot_observation_processor(obs)
 
-        if dataset is not None:
-            observation_frame = build_dataset_frame(
-                dataset.features, obs_processed, prefix=OBS_STR
-            )
+        observation_frame = build_dataset_frame(
+            dataset.features, obs_processed, prefix=OBS_STR
+        )
 
         # Get action from teleop
         act = teleop.get_state_from_topics(topic_data)
@@ -286,19 +299,20 @@ def record_loop(
         action_values = teleop_action_processor((act, obs))
 
         # Write to dataset
-        if dataset is not None:
-            action_frame = build_dataset_frame(
-                dataset.features, action_values, prefix=ACTION
-            )
-            frame = {**observation_frame, **action_frame, "task": task}
-            dataset.add_frame(frame)
+        action_frame = build_dataset_frame(
+            dataset.features, action_values, prefix=ACTION
+        )
+        frame = {**observation_frame, **action_frame, "task": task}
+
+        dataset.add_frame(frame)
+        has_frame = True
 
         if display_data:
             log_rerun_data(observation=obs_processed, action=action_values)
 
         is_saved = False
 
-    if is_recording and not is_saved and dataset is not None:
+    if is_recording and not is_saved and has_frame:
         dataset.save_episode()
 
 
@@ -324,8 +338,8 @@ def record(cfg: RecordConfig) -> LeRobotDataset:
         aggregate_pipeline_dataset_features(
             pipeline=teleop_action_processor,
             initial_features=create_initial_features(
-                action=robot.action_features
-            ),  # TODO(steven, pepijn): in future this should be come from teleop or policy
+                action=teleop.action_features
+            ),
             use_videos=cfg.dataset.video,
         ),
         aggregate_pipeline_dataset_features(
@@ -402,9 +416,6 @@ def record(cfg: RecordConfig) -> LeRobotDataset:
             robot.disconnect()
         if teleop and teleop.is_connected:
             teleop.disconnect()
-
-        if not is_headless() and listener:
-            listener.stop()
 
         if cfg.dataset.push_to_hub:
             dataset.push_to_hub(tags=cfg.dataset.tags, private=cfg.dataset.private)

@@ -23,6 +23,6 @@ from dataclasses import dataclass
 class PoseConfig(ROS2TeleoperatorConfig):
     """Configuration for a ROS 2 pose teleoperator."""
 
-    pose_topic: str = "/cartisian_motion_controller/target_pose"
+    pose_topic: str = "/target_pose"
 
     

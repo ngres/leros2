@@ -65,7 +65,8 @@ class ROS2Common(Generic[ConfigT, ComponentT]):
 
             msg = topics.get(comp.topic)
             if not msg:
-                raise ValueError(f"Topic {comp.topic} not found in topics.")
+                logger.warning(f"Topic {comp.topic} not found in topics.")
+                continue
 
             state.update(comp.to_value(msg))  # type: ignore
 

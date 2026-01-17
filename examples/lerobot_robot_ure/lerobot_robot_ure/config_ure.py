@@ -22,8 +22,8 @@ from dataclasses import dataclass
 class UReConfig(ROS2RobotConfig):
     """Configuration for the UR12e robot arm."""
 
-    joint_state_topic: str = "joint_state"
+    joint_state_topic: str = "/joint_states"
 
-    joint_trajectory_topic: str = "scaled_joint_trajectory_topic/joint_trajectory"
+    joint_trajectory_topic: str = "/scaled_joint_trajectory_topic/joint_trajectory"
 
-    prefix: str = "ure"
+    prefix: str = "ur"

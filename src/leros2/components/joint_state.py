@@ -14,7 +14,7 @@
 
 from typing import Any
 from leros2.components.common import StateComponent, StateComponentConfig
-from trajectory_msgs.msg import JointTrajectory
+from sensor_msgs.msg import JointState
 from leros2.components.common.base import BaseComponentConfig
 from dataclasses import dataclass
 import math
@@ -40,11 +40,11 @@ class JointStateComponentConfig(StateComponentConfig):
     joints: list[JointConfig]
 
 
-class JointStateComponent(StateComponent[JointStateComponentConfig, JointTrajectory]):
+class JointStateComponent(StateComponent[JointStateComponentConfig, JointState]):
     """Adapter for converting a ROS 2 joint state message to a feature value dictionary."""
 
     def __init__(self, config: JointStateComponentConfig):
-        super().__init__(config, JointTrajectory)
+        super().__init__(config, JointState)
 
         self._joints: dict[str, JointConfig] = {}
 
@@ -60,16 +60,16 @@ class JointStateComponent(StateComponent[JointStateComponentConfig, JointTraject
 
         return features
 
-    def to_value(self, msg: JointTrajectory) -> dict[str, Any]:
+    def to_value(self, msg: JointState) -> dict[str, Any]:
         value: dict[str, Any] = {}
 
-        for index, name in enumerate(msg.joint_names):
+        for index, name in enumerate(msg.name):
             joint_config = self._joints.get(name)
             if joint_config is None:
                 continue
 
             value[f"{name}.pos"] = self._normalize_joint(
-                msg.points[0].positions[index],
+                msg.position[index],
                 joint_config,
             )
 

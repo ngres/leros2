@@ -2,6 +2,16 @@
 
 Map [ROS 2](https://www.ros.org/) topics and actions to [LeRobot](https://github.com/huggingface/lerobot) robots and teleoperators.
 
+## Quick Start
+
+Clone the repository and sync dependencies.
+
+```shell
+git clone https://github.com/ngres/leros2.git
+cd leros2
+uv sync --all-packages
+```
+
 ## Robot
 
 A [LeRobot robot](https://github.com/huggingface/lerobot/blob/main/src/lerobot/robots/robot.py) outputs observations such as joint states and publishes actions in the form of joint trajectories.
@@ -109,16 +119,19 @@ A teleoperator can simply extend the `ROS2Teleoperator` class and initilize all 
 
 ## `rosbag2` Conversion
 
-This package provides a `rosbag2` converter to convert ROS 2 bag files to LeRobot datasets. It behaves similar to the `lerobot-record` command-line tool and accepts all robots and teleoperators that extends the `ROS2Robot` and `ROS2Teleoperator` classes respectively.
+This package provides a `rosbag2` converter to convert ROS 2 bag files to LeRobot datasets via the `leros2-convert` command. It behaves similar to the `lerobot-record` command-line tool and accepts all robots and teleoperators that extends the `ROS2Robot` and `ROS2Teleoperator` classes respectively.
 
-To allow the synchronization of the robot and teleoperator actions a `clock_topic` should be specified. 
+ROS 2 messages need to be quantized into dataset frames. This can be done using one of the following methods:
+
+- `--dataset.fps`: Use a fixed FPS rate to capture frames.
+- `--clock_topic`: Use a ROS 2 topic to capture frames every time a message is published. (`--dataset.fps` should also be specified to populate the FPS metadata)
 
 > [!IMPORTANT]
 > Make sure your camera topic publish frequency and dataset FPS are the same. Ideally the camera topic should be used as the clock topic to allign properioceptive and image observations.
 
 ### Multi Episode Example
 
-If multiple episodes are performed during the recording a `task_topic` should be specified. After each string message published with the tasked description the converter will create a new episode.
+If multiple episodes are performed during the recording a `task_topic` should be specified. After each string message published with the tasked description the converter will create a new episode. If no `task_topic` is specified, only one episode will be created, starting after all required topics are recieved atleast once.
 
 ```shell
 leros2-convert \
