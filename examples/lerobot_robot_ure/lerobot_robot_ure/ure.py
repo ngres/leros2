@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from leros2.components.compressed_image import CompressedImageComponent, CompressedImageComponentConfig
 
 from leros2.robot import ROS2Robot
 from leros2.components.joint_action import (
@@ -83,5 +84,21 @@ class URe(ROS2Robot):
                         topic=config.joint_trajectory_topic, joints=joints
                     )
                 ),
+                CompressedImageComponent(
+                    CompressedImageComponentConfig(
+                        topic=config.base_image_topic, 
+                        name="base",
+                        width=1280,
+                        height=720
+                    )
+                ),
+                CompressedImageComponent(
+                    CompressedImageComponentConfig(
+                        topic=config.wrist_image_topic, 
+                        name="wrist",
+                        width=1280,
+                        height=720
+                    )
+                )
             ],
         )

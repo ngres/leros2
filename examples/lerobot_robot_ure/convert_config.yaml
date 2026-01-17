@@ -4,11 +4,13 @@ robot:
 teleop:
   type: pose
 
+# task_topic: /lerobot_task
+
 dataset:
   repo_id: "ngres/leros2-test"
   single_task: "Pick the Lego block and drop it in the box on the right."
   fps: 30
   video: true
-  push_to_hub: false
+  push_to_hub: true
 
 

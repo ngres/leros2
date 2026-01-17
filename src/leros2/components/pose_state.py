@@ -19,6 +19,7 @@ import numpy as np
 from leros2.components.common import StateComponentConfig
 from leros2.components.common.base import BaseComponentConfig
 from dataclasses import dataclass
+from lerobot.utils.rotation import Rotation
 
 
 @dataclass
@@ -30,13 +31,6 @@ class PoseStateComponentConfig(StateComponentConfig):
 class PoseStateComponent(StateComponent[PoseStateComponentConfig, PoseStamped]):
     def __init__(self, config: PoseStateComponentConfig):
         super().__init__(config, PoseStamped)
-
-    def _quat_to_euler(self, quat: np.ndarray) -> np.ndarray:
-        x, y, z, w = quat
-        roll = np.arctan2(2 * (w * x + y * z), 1 - 2 * (x**2 + y**2))
-        pitch = np.arcsin(np.clip(2 * (w * y - z * x), -1.0, 1.0))
-        yaw = np.arctan2(2 * (w * z + x * y), 1 - 2 * (y**2 + z**2))
-        return [roll, pitch, yaw]
 
     @property
     def features(self) -> dict[str, type]:
@@ -50,12 +44,12 @@ class PoseStateComponent(StateComponent[PoseStateComponentConfig, PoseStamped]):
         }
 
     def to_value(self, msg: PoseStamped) -> dict[str, Any]:
-        roll, pitch, yaw = self._quat_to_euler([
+        roll, pitch, yaw = Rotation.from_quat(np.array([
             msg.pose.orientation.x,
             msg.pose.orientation.y,
             msg.pose.orientation.z,
             msg.pose.orientation.w,
-        ])
+        ])).as_rotvec()
         return {
             f"{self._config.name}_x.pos": msg.pose.position.x,
             f"{self._config.name}_x.pos": msg.pose.position.y,

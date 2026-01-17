@@ -26,4 +26,8 @@ class UReConfig(ROS2RobotConfig):
 
     joint_trajectory_topic: str = "/scaled_joint_trajectory_topic/joint_trajectory"
 
+    wrist_image_topic: str = "/wrist_camera/wrist_camera/color/image_raw/compressed"
+
+    base_image_topic: str = "/left_camera/rgb/color/rect/image/compressed"
+
     prefix: str = "ur"

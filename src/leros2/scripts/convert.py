@@ -168,7 +168,7 @@ def record_loop(
     ],  # runs after robot
     dataset: LeRobotDataset,
     display_data: bool = False,
-    event_topic: str = "/lerobot_event",
+    event_topic: str | None = None,
     task_topic: str | None = None,
     clock_topic: str | None = None,
     default_task: str | None = None,
@@ -177,6 +177,7 @@ def record_loop(
     Record a bag file into a dataset.
 
     For every message in the provided `clock_topic`, the robot state and teleoperation actions are captured inside a new dataset frame.
+    If no topic is provided, 
     If the provided `task_topic` is not None, the recording will begin when the first message is received on the task topic. Every further message will create a new episode.
     If the `task_topic` is None, the recording will begin immediately and only one episode will be captured.
     The `event_topic` is used to read events such as `"exit_early"` and `"rerecord_episode"`.
@@ -215,26 +216,33 @@ def record_loop(
         topics.append(clock_topic)
     reader.set_filter(rosbag2_py.StorageFilter(topics=topics))
 
-    topic_data: dict[str, Any] = {}
+    print("meta", reader.get_metadata())
+
+    raw_topic_data: dict[str, Any] = {}
+    parsed_topic_data: dict[str, Any] = {}
 
     task = default_task
 
     is_recording = False
     is_saved = False
 
-    delta_time = 0.0
+    last_timestamp = 0
 
     has_frame = False
 
+    def deserialize_data(topic, data):
+        msg_type = get_message(typename(topic, topic_types))
+        return deserialize_message(data, msg_type)
+
     while reader.has_next():
         topic, data, timestamp = reader.read_next()
-        msg_type = get_message(typename(topic, topic_types))
-        msg = deserialize_message(data, msg_type)
 
-        # store message in topic_data
-        topic_data[topic] = msg
+        # store raw message in raw_topic_data
+        raw_topic_data[topic] = data
+        parsed_topic_data.pop(topic, None)
 
-        if topic == event_topic:
+        if topic == event_topic and event_topic is not None:
+            msg = deserialize_data(topic, data)
             match msg.data:
                 case "exit_early":
                     if is_recording and has_frame:
@@ -242,32 +250,34 @@ def record_loop(
                         has_frame = False
                     is_recording = False
                     is_saved = True
-                    delta_time = 0.0
+                    last_timestamp = 0
                     continue
                 case "rerecord_episode":
                     if dataset is not None:
                         dataset.clear_episode_buffer()
                     is_recording = True
-                    delta_time = 0.0
+                    last_timestamp = 0
                     continue
                 case _:
                     continue
 
-        if topic == task_topic:
+        if topic == task_topic and task_topic is not None:
             # receive a new task to record
+            msg = deserialize_data(topic, data)
             task = msg.data
+            print("task")
             if is_recording and not is_saved and has_frame:
                 # save the previous episode
                 dataset.save_episode()
                 is_saved = True
                 has_frame = False
             is_recording = True
-            delta_time = 0.0
+            last_timestamp = 0
             continue
 
         # only record a new frame when the clock topic is received or the FPS threshold is reached
         if not is_recording:
-            if task_topic is None and all(t in topic_data for t in topics if t != event_topic):
+            if task_topic is None and all(t in raw_topic_data for t in topics if t != event_topic):
                 # if no task_topic is provided, recording starts when all topics are saturated
                 is_recording = True
             else:
@@ -276,14 +286,17 @@ def record_loop(
         if clock_topic is not None and topic != clock_topic:
             continue
 
-        if clock_topic is not None:
-            delta_time += (timestamp - topic_data[clock_topic].header.stamp).to_sec()
-            if delta_time < 1.0 / dataset.fps:
+        if clock_topic is None:
+            if (timestamp - last_timestamp) < (10e9 // dataset.fps):
                 continue
-            delta_time = 0.0
+            last_timestamp = timestamp
+
+        for t, data in raw_topic_data.items():
+            if t not in parsed_topic_data:
+                parsed_topic_data[t] = deserialize_data(t, data)
 
         # Get robot observation
-        obs = robot.get_state_from_topics(topic_data)
+        obs = robot.get_state_from_topics(parsed_topic_data)
 
         # Applies a pipeline to the raw robot observation, default is IdentityProcessor
         obs_processed = robot_observation_processor(obs)
@@ -293,7 +306,7 @@ def record_loop(
         )
 
         # Get action from teleop
-        act = teleop.get_state_from_topics(topic_data)
+        act = teleop.get_state_from_topics(parsed_topic_data)
 
         # Applies a pipeline to the action, default is IdentityProcessor
         action_values = teleop_action_processor((act, obs))
