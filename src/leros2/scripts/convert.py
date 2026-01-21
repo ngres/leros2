@@ -29,6 +29,7 @@ leros2-convert \
     --teleop.type=pose
 ```
 """
+from packaging.utils import _
 
 from lerobot.teleoperators.utils import make_teleoperator_from_config
 from lerobot.robots.utils import make_robot_from_config
@@ -44,11 +45,11 @@ from pathlib import Path
 from pprint import pformat
 from typing import Any
 
-from lerobot.cameras import (  # noqa: F401
-    CameraConfig,  # noqa: F401
+from lerobot.cameras import (
+    CameraConfig,
 )
-from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig  # noqa: F401
-from lerobot.cameras.realsense.configuration_realsense import RealSenseCameraConfig  # noqa: F401
+from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
+from lerobot.cameras.realsense.configuration_realsense import RealSenseCameraConfig
 from lerobot.configs import parser
 from lerobot.datasets.image_writer import safe_stop_image_writer
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
@@ -64,11 +65,11 @@ from lerobot.processor import (
     RobotProcessorPipeline,
     make_default_processors,
 )
-from lerobot.robots import (  # noqa: F401
+from lerobot.robots import ( 
     Robot,
     RobotConfig,
 )
-from lerobot.teleoperators import (  # noqa: F401
+from lerobot.teleoperators import ( 
     Teleoperator,
     TeleoperatorConfig,
 )
@@ -86,8 +87,8 @@ from lerobot.utils.utils import (
 from lerobot.utils.visualization_utils import init_rerun, log_rerun_data
 
 
-import rosbag2_py
-from rclpy.serialization import deserialize_message
+import rosbag2_py  # ty:ignore[unresolved-import]
+from rclpy.serialization import deserialize_message  # ty:ignore[unresolved-import]
 
 
 @dataclass
@@ -287,7 +288,7 @@ def record_loop(
             continue
 
         if clock_topic is None:
-            if (timestamp - last_timestamp) < (10e9 // dataset.fps):
+            if (timestamp - last_timestamp) < (10e8 // dataset.fps):
                 continue
             last_timestamp = timestamp
 
@@ -343,7 +344,7 @@ def record(cfg: RecordConfig) -> LeRobotDataset:
     if not isinstance(teleop, ROS2Teleoperator):
         raise ValueError("Teleoperator must extend ROS2Teleoperator")
 
-    teleop_action_processor, robot_action_processor, robot_observation_processor = (
+    teleop_action_processor, _robot_action_processor, robot_observation_processor = (
         make_default_processors()
     )
 

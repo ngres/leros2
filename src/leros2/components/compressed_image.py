@@ -39,5 +39,5 @@ class CompressedImageComponent(
 
     def to_value(self, msg: CompressedImage) -> dict[str, Any]:
         return {
-            self._config.name: self.bridge.compressed_imgmsg_to_cv2(msg),
+            self._config.name: self.bridge.compressed_imgmsg_to_cv2(msg, desired_encoding="rgb8"),
         }

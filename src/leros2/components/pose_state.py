@@ -18,8 +18,8 @@ from typing import Any
 import numpy as np
 from leros2.components.common import StateComponentConfig
 from leros2.components.common.base import BaseComponentConfig
+from scipy.spatial.transform import Rotation as R
 from dataclasses import dataclass
-from lerobot.utils.rotation import Rotation
 
 
 @dataclass
@@ -36,25 +36,28 @@ class PoseStateComponent(StateComponent[PoseStateComponentConfig, PoseStamped]):
     def features(self) -> dict[str, type]:
         return {
             f"{self._config.name}_x.pos": float,
-            f"{self._config.name}_x.pos": float,
+            f"{self._config.name}_y.pos": float,
             f"{self._config.name}_z.pos": float,
-            f"{self._config.name}_roll.pos": float,
-            f"{self._config.name}_pitch.pos": float,
-            f"{self._config.name}_yaw.pos": float,
+            f"{self._config.name}_x.quat": float,
+            f"{self._config.name}_y.quat": float,
+            f"{self._config.name}_z.quat": float,
+            f"{self._config.name}_w.quat": float,
+            f"{self._config.name}_x.rot": float,
+            f"{self._config.name}_y.rot": float,
+            f"{self._config.name}_z.rot": float,
         }
 
     def to_value(self, msg: PoseStamped) -> dict[str, Any]:
-        roll, pitch, yaw = Rotation.from_quat(np.array([
-            msg.pose.orientation.x,
-            msg.pose.orientation.y,
-            msg.pose.orientation.z,
-            msg.pose.orientation.w,
-        ])).as_rotvec()
+        wx, wy, wz = R.from_quat([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w]).as_rotvec()
         return {
             f"{self._config.name}_x.pos": msg.pose.position.x,
-            f"{self._config.name}_x.pos": msg.pose.position.y,
+            f"{self._config.name}_y.pos": msg.pose.position.y,
             f"{self._config.name}_z.pos": msg.pose.position.z,
-            f"{self._config.name}_roll.pos": roll,
-            f"{self._config.name}_pitch.pos": pitch,
-            f"{self._config.name}_yaw.pos": yaw,
+            f"{self._config.name}_x.quat": msg.pose.orientation.x,
+            f"{self._config.name}_y.quat": msg.pose.orientation.y,
+            f"{self._config.name}_z.quat": msg.pose.orientation.z,
+            f"{self._config.name}_w.quat": msg.pose.orientation.w,
+            f"{self._config.name}_x.rot": wx,
+            f"{self._config.name}_y.rot": wy,
+            f"{self._config.name}_z.rot": wz,
         }
