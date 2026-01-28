@@ -26,7 +26,7 @@ class UReConfig(ROS2RobotConfig):
 
     pose_state_topic = "/current_pose"
 
-    joint_trajectory_topic: str = "/scaled_joint_trajectory_topic/joint_trajectory"
+    pose_action_topic: str = "/target_pose"
 
     wrist_image_topic: str = "/wrist_camera/color/image_raw/compressed"
 

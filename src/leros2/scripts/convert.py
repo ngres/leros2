@@ -172,7 +172,7 @@ def record_loop(
     event_topic: str | None = None,
     task_topic: str | None = None,
     clock_topic: str | None = None,
-    default_task: str | None = None,
+    single_task: str | None = None,
 ):
     """
     Record a bag file into a dataset.
@@ -194,7 +194,7 @@ def record_loop(
         clock_topic: Clock topic to use.
         event_topic: Event topic to use.
         task_topic: Task topic to use. If None, the recording will begin immediately.
-        default_task: Default task to use if no task is received on the task topic.
+        single_task: Default task to use if no task is received on the task topic.
     """
     reader = rosbag2_py.SequentialReader()
     reader.open(
@@ -222,7 +222,7 @@ def record_loop(
     raw_topic_data: dict[str, Any] = {}
     parsed_topic_data: dict[str, Any] = {}
 
-    task = default_task
+    task = single_task
 
     is_recording = False
     is_saved = False
@@ -268,7 +268,8 @@ def record_loop(
         if task_topic is not None and topic == task_topic:
             # receive a new task to record
             msg = deserialize_data(topic, data)
-            task = msg.data
+            if single_task is None:
+                task = msg.data
             print("task")
             if is_recording and not is_saved and has_frame:
                 # save the previous episode
@@ -423,7 +424,7 @@ def record(cfg: RecordConfig) -> LeRobotDataset:
                 clock_topic=cfg.clock_topic,
                 event_topic=cfg.event_topic,
                 task_topic=cfg.task_topic,
-                default_task=cfg.dataset.single_task,
+                single_task=cfg.dataset.single_task,
             )
     finally:
         log_say("Conversion finished", cfg.play_sounds, blocking=True)

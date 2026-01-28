@@ -8,7 +8,7 @@ task_topic: /lerobot_task
 
 event_topic: /lerobot_event
 
-bag_path: ../../../bags/lerobot_bag_2026_01_22-14_37_09
+bag_path: ../../../bags/lerobot_bag_2026_01_26-15_58_02
 
 dataset:
   repo_id: "ngres/leros2-ur10e-cube"

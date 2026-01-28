@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from leros2.components.pose_action import PoseActionComponent, PoseActionComponentConfig
 from leros2.components.pose_state import PoseStateComponent, PoseStateComponentConfig
 from leros2.components.compressed_image import CompressedImageComponent, CompressedImageComponentConfig
 
@@ -29,6 +31,13 @@ import math
 from .config_ure import UReConfig
 
 URE_JOINTS = [
+    JointConfig(
+        name="gripper",
+        range_min=0.0,
+        range_max=0.7929,
+        norm_min=0.0,
+        ros_name="robotiq_85_left_knuckle_joint"
+    ),
     JointConfig(
         name="ur_shoulder_pan_joint",
         range_min=-math.pi,
@@ -58,12 +67,6 @@ URE_JOINTS = [
         name="ur_wrist_3_joint",
         range_max=math.pi,
     ),
-    JointConfig(
-        name="gripper",
-        range_min=0.0,
-        range_max=0.7929,
-        ros_name="robotiq_85_left_knuckle_joint"
-    ),
 ]
 
 
@@ -78,14 +81,15 @@ class URe(ROS2Robot):
         super().__init__(
             config,
             [
-                JointStateComponent(  # Read joint state
-                    JointStateComponentConfig(
-                        topic=config.joint_state_topic, joints=joints
+                PoseStateComponent(
+                    PoseStateComponentConfig(
+                        topic=config.pose_state_topic,
+                        name="pose"
                     )
                 ),
-                JointActionComponent(  # Send joint trajectory
-                    JointActionComponentConfig(
-                        topic=config.joint_trajectory_topic, joints=joints
+                JointStateComponent(  # Read joint states
+                    JointStateComponentConfig(
+                        topic=config.joint_state_topic, joints=joints
                     )
                 ),
                 CompressedImageComponent(
@@ -104,11 +108,18 @@ class URe(ROS2Robot):
                         height=480
                     )
                 ),
-                PoseStateComponent(
-                    PoseStateComponentConfig(
-                        topic=config.pose_state_topic,
+                # actions
+                PoseActionComponent(
+                    PoseActionComponentConfig(
+                        topic=config.pose_action_topic,
                         name="pose"
                     )
-                )
+                ),
+                # - or -
+                # JointActionComponent(
+                #     JointActionComponentConfig(
+                #         topic=config.joint_trajectory_topic, joints=joints
+                #     )
+                # ),
             ],
         )

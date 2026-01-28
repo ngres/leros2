@@ -33,6 +33,12 @@ class JointConfig:
     # Maximum range of the joint
     range_max: float = math.pi
 
+    # Lower normalization bound
+    norm_min: float = -1.0
+
+    # Upper normalization bound
+    norm_max: float = 1.0
+
     # Optional name of the joint in the ROS message if it deviates from the LeRobot joint name
     ros_name: str | None = None
 
@@ -81,6 +87,6 @@ class JointStateComponent(StateComponent[JointStateComponentConfig, JointState])
     def _normalize_joint(self, value: float, config: JointConfig) -> float:
         """Normalize a joint value from radians."""
 
-        return (value - config.range_min) / (
-            config.range_max - config.range_min
-        ) * 2.0 - 1.0
+        return config.norm_min + (value - config.range_min) * (
+            config.norm_max - config.norm_min
+        ) / (config.range_max - config.range_min)
