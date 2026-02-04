@@ -84,8 +84,9 @@ from lerobot.utils.utils import (
     init_logging,
     log_say,
 )
-from lerobot.utils.visualization_utils import init_rerun, log_rerun_data
-
+from lerobot.utils.constants import HF_LEROBOT_HOME
+import os
+from shutil import rmtree
 
 import rosbag2_py  # ty:ignore[unresolved-import]
 from rclpy.serialization import deserialize_message  # ty:ignore[unresolved-import]
@@ -325,9 +326,6 @@ def record_loop(
         dataset.add_frame(frame)
         has_frame = True
 
-        if display_data:
-            log_rerun_data(observation=obs_processed, action=action_values)
-
         is_saved = False
 
     if is_recording and not is_saved and has_frame:
@@ -335,11 +333,9 @@ def record_loop(
 
 
 @parser.wrap()
-def record(cfg: RecordConfig) -> LeRobotDataset:
+def record(cfg: RecordConfig) -> LeRobotDataset | None:
     init_logging()
     logging.info(pformat(asdict(cfg)))
-    if cfg.display_data:
-        init_rerun(session_name="converting")
 
     robot = make_robot_from_config(cfg.robot)
     if not isinstance(robot, ROS2Robot):
@@ -372,8 +368,6 @@ def record(cfg: RecordConfig) -> LeRobotDataset:
     dataset = None
     listener = None
 
-    print("image_feature_count", robot.image_feature_count)
-
     image_writer_threads = (
         cfg.dataset.num_image_writer_threads_per_camera * robot.image_feature_count
     )
@@ -395,6 +389,16 @@ def record(cfg: RecordConfig) -> LeRobotDataset:
                 dataset, robot, cfg.dataset.fps, dataset_features
             )
         else:
+            root = Path(cfg.dataset.root) if cfg.dataset.root is not None else HF_LEROBOT_HOME / cfg.dataset.repo_id
+
+
+            if os.path.exists(root):
+                if input("Dataset already exists locally. Do you want to *overwrite* it? [y/N]: ").lower() == "y":
+                    rmtree(root)
+                else:
+                    log_say("Conversion aborted", False, blocking=False)
+                    return None
+
             # Create empty dataset or load existing saved episodes
             dataset = LeRobotDataset.create(
                 cfg.dataset.repo_id,

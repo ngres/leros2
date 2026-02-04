@@ -8,8 +8,8 @@ dependencies = [
     "black>=25.11.0",
     "cv-bridge>=1.13.0.post0",
     "draccus>=0.10.0",
-    "lerobot>=0.4.2",
-    "numpy",
+    "lerobot>=0.4.2,<0.4.3",
+    "numpy<2.0.0",
 ]
 
 [tool.uv.workspace]
@@ -26,7 +26,7 @@ module-root = "src"
 
 [[tool.uv.dependency-metadata]]
 name = "lerobot"
-version = "0.4.3"  # Match the version you are installing
+version = "0.4.2"  # Match the version you are installing
 requires-dist = [
   # Hugging Face dependencies
     "datasets>=4.0.0,<4.2.0",
