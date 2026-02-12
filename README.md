@@ -3,7 +3,9 @@
 Integrate any [ROS 2](https://www.ros.org/) robot or teleoperation device with [LeRobot](https://github.com/huggingface/lerobot). LeROS2 allows you to record and control robots using joint positions, end-effector poses, joint torques or cartesian wrench actions. The framework aims to be compleatly composable to allow the combination of one or more robot arms width different cameras and grippers.
 
 🦾 Customizable joint positin/torque or end-effector pose/wrench support
+
 🧩 Composable design be defining robot components (mapping between ROS 2 topics/actions and LeRobot features)
+
 📼 Convert ROS 2 bags into LeRobot datasets 
 
 ## Quick Start

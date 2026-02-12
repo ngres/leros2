@@ -270,8 +270,8 @@ class DatasetConverter:
                     # Receive a new task to record
                     msg = self._deserialize_data(topic, data)
                     if self.single_task is None:
-                        task = msg.data
-                    print(f"episode {self._num_episodes} - new task: {task}")
+                        self._task = msg.data
+                    print(f"episode {self._num_episodes} - new task: {self._task}")
                     # Save the previous episode (if recorded)
                     self._save_episode()
                     self._tasked_received = True
