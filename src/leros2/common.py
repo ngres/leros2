@@ -72,6 +72,12 @@ class ROS2Common(Generic[ConfigT, ComponentT]):
 
         return state
 
+    @property
+    def node(self):
+        if not self._node:
+            raise RuntimeError("Node is not initialized. Call connect() first.")
+        return self._node
+
     def connect(self) -> None:
         if self.is_connected:
             raise DeviceAlreadyConnectedError(f"{self} already connected")

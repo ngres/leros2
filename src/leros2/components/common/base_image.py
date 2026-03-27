@@ -18,7 +18,7 @@ MsgT = TypeVar("MsgT")
 
 
 class ImageBaseComponent(StateComponent[ConfigT, MsgT], Generic[ConfigT, MsgT]):
-    def __init__(self, config: ConfigT, msg_type: type[MsgT]):
+    def __init__(self, config: ConfigT, msg_type: "type[MsgT]"):
         super().__init__(config, msg_type)
 
     @property

@@ -35,12 +35,10 @@ MsgT = TypeVar("MsgT")
 class StateComponent(BaseComponent[StateConfigT], Generic[StateConfigT, MsgT]):
     """Adapter for converting a ROS 2 message to state features."""
 
-    _msg_type: type[MsgT]
-
     def __init__(self, config: StateConfigT, msg_type: type[MsgT]):
         super().__init__(config)
 
-        self._msg_type = msg_type
+        self._msg_type: type[MsgT] = msg_type
 
     @abstractmethod
     def to_value(self, msg: MsgT) -> dict[str, Any] | NDArray[Any]:

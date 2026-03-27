@@ -49,12 +49,11 @@ class ActionComponent(BaseComponent[ActionConfigT], Generic[ActionConfigT]):
 class ActionTopicComponent(ActionComponent[ActionConfigT], Generic[ActionConfigT, MsgT]):
     """Adapter for converting action features to a ROS 2 topic message."""
 
-    _msg_type: type[MsgT]
 
     def __init__(self, config: ActionConfigT, msg_type: type[MsgT]):
         super().__init__(config)
 
-        self._msg_type = msg_type
+        self._msg_type: type[MsgT] = msg_type
 
     @abstractmethod
     def to_message(self, action: dict[str, Any]) -> MsgT:
@@ -94,12 +93,10 @@ class ActionTopicComponent(ActionComponent[ActionConfigT], Generic[ActionConfigT
 class ActionClientComponent(ActionComponent[ActionConfigT], Generic[ActionConfigT, MsgT]):
     """Adapter for converting action features to a ROS 2 action command."""
 
-    _msg_type: type[MsgT]
-
-    def __init__(self, config: ActionConfigT, msg_type: type[MsgT]):
+    def __init__(self, config: ActionConfigT, msg_type: "type[MsgT]"):
         super().__init__(config)
 
-        self._msg_type = msg_type
+        self._msg_type: type[MsgT] = msg_type
 
     @abstractmethod
     def to_goal(self, action: dict[str, Any]) -> Any:

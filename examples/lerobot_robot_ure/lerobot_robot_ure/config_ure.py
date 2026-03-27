@@ -30,7 +30,7 @@ class UReConfig(ROS2RobotConfig):
 
     gripper_action_topic: str = "/robotiq_gripper_controller/gripper_cmd"
 
-    pose_action_topic: str = "/target_pose"
+    pose_action_topic: str = "/external_pose"
 
     pose_action_frame: str = "ur_base_link"
 

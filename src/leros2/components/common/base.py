@@ -30,10 +30,8 @@ ConfigT = TypeVar("ConfigT", bound=BaseComponentConfig)
 class BaseComponent(ABC, Generic[ConfigT]):
     """Adapter for returning the feature representation of a message."""
 
-    _config: ConfigT
-
     def __init__(self, config: ConfigT):
-        self._config = config
+        self._config: ConfigT = config
         self._node: Node | None = None
 
     @property
