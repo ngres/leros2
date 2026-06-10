@@ -6,7 +6,7 @@ Integrate any [ROS 2](https://www.ros.org/) robot or teleoperation device with [
 
 🧩 Composable design be defining robot components (mapping between ROS 2 topics/actions and LeRobot features)
 
-📼 Convert ROS 2 bags into LeRobot datasets 
+📼 Convert ROS 2 bags into LeRobot datasets
 
 ## Quick Start
 
@@ -15,17 +15,16 @@ Clone the repository and sync dependencies.
 ```shell
 git clone https://github.com/ngres/leros2.git
 cd leros2
-uv sync --all-packages
 ```
 
 ## Robot
 
 A [LeRobot robot](https://github.com/huggingface/lerobot/blob/main/src/lerobot/robots/robot.py) outputs observations such as joint states and publishes actions in the form of joint trajectories.
 
-A ROS 2 LeRobot robot consists of *components* that subscribe to topics (`StateComponent`) and publish ROS 2 messages (`ActionComponent`).
+A ROS 2 LeRobot robot consists of _components_ that subscribe to topics (`StateComponent`) and publish ROS 2 messages (`ActionComponent`).
 
 ```python
-# file: lerobot_robot_ure/ure.py
+# file: lerobot_robot_ur/ur.py
 
 from leros2.robot import ROS2Robot
 from leros2.components.joint_action import (
@@ -39,14 +38,14 @@ from leros2.components.joint_state import (
 )
 import math
 
-from .config_ure import UReConfig
+from .config_ur import URConfig
 
-class URe(ROS2Robot):
-    """Robot class for an URe series robot arm."""
+class UR(ROS2Robot):
+    """Robot class for a Universal Robots e-series robot arm."""
 
-    name = "ure"
+    name = "ur"
 
-    def __init__(self, config: UReConfig):
+    def __init__(self, config: URConfig):
         joints = [
             JointConfig(
                 name="shoulder_pan_joint",
@@ -69,7 +68,7 @@ class URe(ROS2Robot):
                 name="wrist_3_joint",
             ),
         ]
-        
+
         super().__init__(
             config,
             [
@@ -97,16 +96,16 @@ class URe(ROS2Robot):
 For LeRobot to recognize you need place your robot class in a python package prefixed with `lerobot_robot_` and register the associated config file.
 
 ```python
-# file: lerobot_robot_ure/config_ure.py
+# file: lerobot_robot_ur/config_ur.py
 
 from dataclasses import dataclass
 from lerobot_robot_ros2 import ROS2RobotConfig
 from lerobot.robots.config import RobotConfig
 
-@RobotConfig.register_subclass("ure")
+@RobotConfig.register_subclass("ur")
 @dataclass
-class UReConfig(ROS2RobotConfig):
-    """Configuration for the UR12e robot arm."""
+class URConfig(ROS2RobotConfig):
+    """Configuration for the UR e-series robot arm."""
 
     joint_state_topic: str = "joint_state"
     joint_trajectory_topic: str = "scaled_joint_trajectory_topic/joint_trajectory"
