@@ -16,7 +16,7 @@ from abc import abstractmethod, ABC
 from typing import Generic, TypeVar
 from rclpy.node import Node
 from dataclasses import dataclass
-from draccus import ChoiceRegistry
+from draccus.choice_types import ChoiceRegistry
 
 
 @dataclass

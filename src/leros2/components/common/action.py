@@ -15,7 +15,7 @@
 from dataclasses import dataclass
 from abc import abstractmethod
 from typing import Any, Generic, TypeVar
-from rclpy.action import ActionClient
+from rclpy.action.client import ActionClient
 from rclpy.node import Node
 
 from .base import BaseComponent, BaseComponentConfig
