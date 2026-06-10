@@ -15,7 +15,6 @@
 from leros2.components.common import StateComponent
 from geometry_msgs.msg import PoseStamped
 from typing import Any
-import numpy as np
 from leros2.components.common import StateComponentConfig
 from leros2.components.common.base import BaseComponentConfig
 from dataclasses import dataclass
@@ -32,7 +31,7 @@ class PoseStateComponent(StateComponent[PoseStateComponentConfig, PoseStamped]):
         super().__init__(config, PoseStamped)
 
     @property
-    def features(self) -> dict[str, type]:
+    def features(self) -> dict[str, type | tuple[type, ...]]:
         return {
             f"{self._config.name}_x.pos": float,
             f"{self._config.name}_y.pos": float,

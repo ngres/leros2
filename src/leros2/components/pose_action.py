@@ -15,8 +15,6 @@ from dataclasses import dataclass
 
 from geometry_msgs.msg import PoseStamped
 from typing import Any
-import numpy as np
-from lerobot.utils.rotation import Rotation
 from leros2.components.common import ActionComponentConfig, ActionTopicComponent
 from leros2.components.common.base import BaseComponentConfig
 
@@ -36,7 +34,7 @@ class PoseActionComponent(ActionTopicComponent[PoseActionComponentConfig, PoseSt
         super().__init__(config, PoseStamped)
 
     @property
-    def features(self) -> dict[str, type]:
+    def features(self) -> dict[str, type | tuple[type, ...]]:
         return {
             f"{self._config.name}_x.pos": float,
             f"{self._config.name}_y.pos": float,

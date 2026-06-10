@@ -82,7 +82,7 @@ class JointStateComponent(StateComponent[JointStateComponentConfig, JointState])
             self._joints[joint.ros_name or joint.name] = joint
 
     @property
-    def features(self) -> dict[str, type]:
+    def features(self) -> dict[str, type | tuple[type, ...]]:
         features: dict[str, type] = {}
 
         for joint in self._joints.values():

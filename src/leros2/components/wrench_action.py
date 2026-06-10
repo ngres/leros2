@@ -12,23 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from leros2.components.common import StateComponent
-
 from typing import Any
-from leros2.components.common import StateComponentConfig
-from leros2.components.common.base import BaseComponentConfig
 from dataclasses import dataclass
 from geometry_msgs.msg import WrenchStamped
 
+from leros2.components.common import ActionTopicComponent, ActionComponentConfig
+from leros2.components.common.base import BaseComponentConfig
+
 
 @dataclass
-@BaseComponentConfig.register_subclass('wrench_state')
-class WrenchStateComponentConfig(StateComponentConfig):
+@BaseComponentConfig.register_subclass('wrench_action')
+class WrenchActionComponentConfig(ActionComponentConfig):
     name: str
 
 
-class WrenchStateComponent(StateComponent[WrenchStateComponentConfig, WrenchStamped]):
-    def __init__(self, config: WrenchStateComponentConfig):
+class WrenchActionComponent(
+    ActionTopicComponent[WrenchActionComponentConfig, WrenchStamped]
+):
+    def __init__(self, config: WrenchActionComponentConfig):
         super().__init__(config, WrenchStamped)
 
     @property
@@ -42,12 +43,12 @@ class WrenchStateComponent(StateComponent[WrenchStateComponentConfig, WrenchStam
             f"{self._config.name}_z.torque": float,
         }
 
-    def to_value(self, msg: WrenchStamped) -> dict[str, Any]:
-        return {
-            f"{self._config.name}_x.force": msg.wrench.force.x,
-            f"{self._config.name}_y.force": msg.wrench.force.y,
-            f"{self._config.name}_z.force": msg.wrench.force.z,
-            f"{self._config.name}_x.torque": msg.wrench.torque.x,
-            f"{self._config.name}_y.torque": msg.wrench.torque.y,
-            f"{self._config.name}_z.torque": msg.wrench.torque.z,
-        }
+    def to_message(self, action: dict[str, Any]) -> WrenchStamped:
+        msg = WrenchStamped()
+        msg.wrench.force.x = action[f"{self._config.name}_x.force"]
+        msg.wrench.force.y = action[f"{self._config.name}_y.force"]
+        msg.wrench.force.z = action[f"{self._config.name}_z.force"]
+        msg.wrench.torque.x = action[f"{self._config.name}_x.torque"]
+        msg.wrench.torque.y = action[f"{self._config.name}_y.torque"]
+        msg.wrench.torque.z = action[f"{self._config.name}_z.torque"]
+        return msg

@@ -17,8 +17,6 @@ from dataclasses import dataclass
 
 from control_msgs.action import ParallelGripperCommand
 from typing import Any
-import numpy as np
-from lerobot.utils.rotation import Rotation
 from leros2.components.common import ActionComponentConfig, ActionClientComponent
 from leros2.components.common.base import BaseComponentConfig
 
@@ -34,8 +32,8 @@ class ParallelGripperActionComponent(ActionClientComponent[ParallelGripperAction
         super().__init__(config, ParallelGripperCommand)
 
     @property
-    def features(self) -> dict[str, type]:
-        features: dict[str, type] = {}
+    def features(self) -> dict[str, type | tuple[type, ...]]:
+        features: dict[str, type | tuple[type, ...]] = {}
 
         for joint in self._config.joints:
             features[f"{joint.name}.pos"] = float

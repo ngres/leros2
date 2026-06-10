@@ -35,8 +35,8 @@ class JointActionComponent(
         super().__init__(config, JointTrajectory)
 
     @property
-    def features(self) -> dict[str, type]:
-        features: dict[str, type] = {}
+    def features(self) -> dict[str, type | tuple[type, ...]]:
+        features: dict[str, type | tuple[type, ...]] = {}
 
         for joint in self._config.joints:
             features[f"{joint.name}.pos"] = float
