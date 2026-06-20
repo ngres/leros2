@@ -47,13 +47,12 @@ from pprint import pformat
 from typing import Any
 
 from lerobot.configs import parser
-from lerobot.datasets.image_writer import safe_stop_image_writer
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
 from lerobot.datasets.pipeline_features import (
     aggregate_pipeline_dataset_features,
     create_initial_features,
 )
-from lerobot.utils.feature_utils import build_dataset_frame, combine_feature_dicts
+from lerobot.datasets.feature_utils import build_dataset_frame, combine_feature_dicts
 from lerobot.datasets.video_utils import VideoEncodingManager
 from lerobot.processor import (
     RobotAction,
@@ -62,17 +61,13 @@ from lerobot.processor import (
     make_default_processors,
 )
 from lerobot.robots import ( 
-    Robot,
     RobotConfig,
 )
 from lerobot.teleoperators import ( 
-    Teleoperator,
     TeleoperatorConfig,
 )
 from lerobot.utils.constants import ACTION, OBS_STR
 from lerobot.utils.control_utils import (
-    init_keyboard_listener,
-    is_headless,
     sanity_check_dataset_robot_compatibility,
 )
 from lerobot.utils.import_utils import register_third_party_plugins
