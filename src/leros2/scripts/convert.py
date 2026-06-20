@@ -46,11 +46,6 @@ from pathlib import Path
 from pprint import pformat
 from typing import Any
 
-from lerobot.cameras import (
-    CameraConfig,
-)
-from lerobot.cameras.opencv.configuration_opencv import OpenCVCameraConfig
-from lerobot.cameras.realsense.configuration_realsense import RealSenseCameraConfig
 from lerobot.configs import parser
 from lerobot.datasets.image_writer import safe_stop_image_writer
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
@@ -58,7 +53,7 @@ from lerobot.datasets.pipeline_features import (
     aggregate_pipeline_dataset_features,
     create_initial_features,
 )
-from lerobot.datasets.utils import build_dataset_frame, combine_feature_dicts
+from lerobot.utils.feature_utils import build_dataset_frame, combine_feature_dicts
 from lerobot.datasets.video_utils import VideoEncodingManager
 from lerobot.processor import (
     RobotAction,
@@ -80,7 +75,7 @@ from lerobot.utils.control_utils import (
     is_headless,
     sanity_check_dataset_robot_compatibility,
 )
-from lerobot.utils.import_utils import register_third_party_devices
+from lerobot.utils.import_utils import register_third_party_plugins
 from lerobot.utils.utils import (
     init_logging,
     log_say,
@@ -459,14 +454,17 @@ def record(cfg: RecordConfig) -> LeRobotDataset | None:
             teleop.disconnect()
 
         if cfg.dataset.push_to_hub:
-            dataset.push_to_hub(tags=cfg.dataset.tags, private=cfg.dataset.private)
+            if dataset and dataset.num_episodes > 0:
+                dataset.push_to_hub(tags=cfg.dataset.tags, private=cfg.dataset.private)
+            else:
+                logging.warning("No episodes saved — skipping push to hub")
 
         log_say("Exiting", cfg.play_sounds)
     return dataset
 
 
 def main():
-    register_third_party_devices()
+    register_third_party_plugins()
     record()
 
 
