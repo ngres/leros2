@@ -232,8 +232,6 @@ class DatasetConverter:
         self._last_timestamp = 0
         self._has_frame = False
         self._is_recording = False
-        self._raw_topic_data.clear()
-        self._parsed_topic_data.clear()
 
     @cached_property
     def topics(self) -> list[str]:
