@@ -64,7 +64,7 @@ class URConfig(ROS2RobotConfig):
     # Prefix of the arm joint names in `/joint_states`, e.g. "ur_"
     joint_prefix: str = ""
 
-    action_space: Literal["ee", "joint"] = "ee"
+    action_space: Literal["ee", "joint", "wrench"] = "ee"
 
     # --- State topics ---------------------------------------------------
     joint_state_topic: str = "/joint_states"
@@ -72,10 +72,9 @@ class URConfig(ROS2RobotConfig):
     wrench_state_topic: str = "/force_torque_sensor_broadcaster/wrench"
 
     # --- Action topics --------------------------------------------------
-    # End-effector pose target (used when action_space == "ee").
-    pose_action_topic: str = "/target_pose"
-    pose_action_frame: str = "ur_base_link"
-    # Joint trajectory target (used when action_space == "joint").
+    action_frame: str = "ur_base_link"
+    pose_action_topic: str = "/target_pose_alt"
+    wrench_action_topic: str = "/cartesian_compliance_controller/target_wrench"
     joint_action_topic: str = "/scaled_joint_trajectory_controller/joint_trajectory"
 
     # --- Cameras & gripper ----------------------------------------------

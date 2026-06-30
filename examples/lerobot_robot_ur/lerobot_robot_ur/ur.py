@@ -26,6 +26,7 @@ from leros2.components.joint_action import (
 from leros2.components.pose_action import PoseActionComponent, PoseActionComponentConfig
 from leros2.components.pose_state import PoseStateComponent, PoseStateComponentConfig
 from leros2.components.wrench_state import WrenchStateComponent, WrenchStateComponentConfig
+from leros2.components.wrench_action import WrenchActionComponent, WrenchActionComponentConfig
 from leros2.components.compressed_image import (
     CompressedImageComponent,
     CompressedImageComponentConfig,
@@ -122,8 +123,18 @@ class UR(ROS2Robot):
                 PoseActionComponent(
                     PoseActionComponentConfig(
                         topic=topic(config.pose_action_topic),
-                        frame_id=config.pose_action_frame,
+                        frame_id=config.action_frame,
                         name="pose",
+                    )
+                )
+            )
+        elif config.action_space == "wrench":
+            components.append(
+                WrenchActionComponent(
+                    WrenchActionComponentConfig(
+                        topic=topic(config.wrench_action_topic),
+                        frame_id=config.action_frame,
+                        name="wrench",
                     )
                 )
             )

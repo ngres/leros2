@@ -24,6 +24,7 @@ from leros2.components.common.base import BaseComponentConfig
 @BaseComponentConfig.register_subclass('wrench_action')
 class WrenchActionComponentConfig(ActionComponentConfig):
     name: str
+    frame_id: str
 
 
 class WrenchActionComponent(
@@ -45,6 +46,7 @@ class WrenchActionComponent(
 
     def to_message(self, action: dict[str, Any]) -> WrenchStamped:
         msg = WrenchStamped()
+        msg.header.frame_id = self._config.frame_id
         msg.wrench.force.x = action[f"{self._config.name}_x.force"]
         msg.wrench.force.y = action[f"{self._config.name}_y.force"]
         msg.wrench.force.z = action[f"{self._config.name}_z.force"]
