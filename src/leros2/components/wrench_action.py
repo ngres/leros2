@@ -46,6 +46,8 @@ class WrenchActionComponent(
 
     def to_message(self, action: dict[str, Any]) -> WrenchStamped:
         msg = WrenchStamped()
+        if self._node:
+            msg.header.stamp = self._node.get_clock().now().to_msg()
         msg.header.frame_id = self._config.frame_id
         msg.wrench.force.x = action[f"{self._config.name}_x.force"]
         msg.wrench.force.y = action[f"{self._config.name}_y.force"]

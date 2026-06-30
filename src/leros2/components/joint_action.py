@@ -48,6 +48,9 @@ class JointActionComponent(
         msg.joint_names = []
         msg.points = [JointTrajectoryPoint()]
 
+        if self._node:
+            msg.header.stamp = self._node.get_clock().now().to_msg()
+
         for joint in self._config.joints:
             joint_value = action[f"{joint.name}.pos"]
             if joint_value is None:

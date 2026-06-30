@@ -48,6 +48,8 @@ class PoseActionComponent(ActionTopicComponent[PoseActionComponentConfig, PoseSt
     def to_message(self, action: dict[str, Any]) -> PoseStamped:
         msg = PoseStamped()
 
+        if self._node:
+            msg.header.stamp = self._node.get_clock().now().to_msg()
         msg.header.frame_id = self._config.frame_id
 
         msg.pose.position.x = action[f"{self._config.name}_x.pos"]
