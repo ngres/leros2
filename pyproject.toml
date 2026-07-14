@@ -18,7 +18,7 @@ dataset = [
 ]
 
 [tool.uv.workspace]
-members = ["examples/*"]
+members = ["packages/*", "examples/*"]
 
 [build-system]
 requires = ["uv_build>=0.9.10,<0.10.0"]
@@ -46,8 +46,15 @@ packaging = "<26.0"
 setuptools = "<81.0.0"
 numpy = ">=2.0.0,<2.3.0"
 
+[tool.pixi.feature.jazzy.activation.env]
+# torch bundles its own libomp.dylib alongside conda's llvm-openmp; both are the
+# same LLVM OpenMP runtime, so allow the duplicate init instead of aborting.
+KMP_DUPLICATE_LIB_OK = "TRUE"
+
 [tool.pixi.feature.jazzy.pypi-dependencies]
 leros2 = { path = ".", editable = true, extras = ["dataset"] }
+lerobot_robot_ros2 = { path = "packages/lerobot_robot_ros2", editable = true }
+lerobot_teleoperator_ros2 = { path = "packages/lerobot_teleoperator_ros2", editable = true }
 
 
 [tool.pixi.environments]

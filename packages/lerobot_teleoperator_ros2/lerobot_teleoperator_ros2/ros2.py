@@ -12,18 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from leros2.components.common import StateComponent
 from leros2.components.factory import make_components
-from leros2.robot import ROS2Robot
+from leros2.teleoperator import ROS2Teleoperator
 
-from .config_ros2 import ROS2Config
+from .config_ros2 import ROS2TeleopConfig
 
 
-class ROS2(ROS2Robot):
-    """Generic ROS 2 robot assembled from configured state/action components."""
+class ROS2Teleop(ROS2Teleoperator):
+    """Generic ROS 2 teleoperator assembled from configured state components."""
 
     name = "ros2"
 
-    def __init__(self, config: ROS2Config):
-        components = make_components([*config.state, *config.action])
+    def __init__(self, config: ROS2TeleopConfig):
+        components = make_components(config.action)
+
+        for component in components:
+            if not isinstance(component, StateComponent):
+                raise ValueError(
+                    f"Teleoperator components must be state components, got "
+                    f"{type(component).__name__}."
+                )
 
         super().__init__(config, components)

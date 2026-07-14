@@ -31,7 +31,9 @@ leros2-convert \
 """
 from functools import cached_property
 
+from mcap.reader import make_reader
 from mcap_ros2.reader import read_ros2_messages
+from tqdm import tqdm
 
 from leros2.teleoperator import ROS2Teleoperator
 from leros2.robot import ROS2Robot
@@ -183,11 +185,35 @@ class DatasetConverter:
             if t is not None
         ]
 
+    def _count_messages(self, bag_path: str) -> int | None:
+        """Sum message counts for the subscribed topics from the mcap summary statistics."""
+        try:
+            with open(bag_path, "rb") as f:
+                summary = make_reader(f).get_summary()
+        except (OSError, ValueError):
+            return None
+        if summary is None or summary.statistics is None:
+            return None
+        topics = set(self.topics)
+        return sum(
+            count
+            for channel_id, count in summary.statistics.channel_message_counts.items()
+            if (channel := summary.channels.get(channel_id)) is not None
+            and channel.topic in topics
+        )
+
     @safe_stop_image_writer
     def convert(self, bag_path: str):
         self._task = self.single_task
 
-        for msg in read_ros2_messages(bag_path, topics=self.topics):
+        total = self._count_messages(bag_path)
+        messages = tqdm(
+            read_ros2_messages(bag_path, topics=self.topics),
+            total=total,
+            unit="msg",
+            desc="Converting bag",
+        )
+        for msg in messages:
             if self.max_episodes and self._num_episodes >= self.max_episodes:
                 return
 
@@ -267,7 +293,6 @@ class DatasetConverter:
         if self._has_frame:
             self._save_episode()
 
-@parser.wrap()
 def convert(cfg: BaseConvertConfig, robot: ROS2Robot, teleop: ROS2Teleoperator) -> LeRobotDataset | None:
     init_logging()
     logging.info(pformat(asdict(cfg)))
@@ -347,10 +372,6 @@ def convert(cfg: BaseConvertConfig, robot: ROS2Robot, teleop: ROS2Teleoperator) 
                 encoder_threads=cfg.dataset.encoder_threads,
             )
 
-        robot.connect()
-        if teleop is not None:
-            teleop.connect()
-
         with VideoEncodingManager(dataset):
             converter = DatasetConverter(
                 robot=robot,
@@ -370,11 +391,6 @@ def convert(cfg: BaseConvertConfig, robot: ROS2Robot, teleop: ROS2Teleoperator) 
 
         if dataset:
             dataset.finalize()
-
-        if robot.is_connected:
-            robot.disconnect()
-        if teleop and teleop.is_connected:
-            teleop.disconnect()
 
         if cfg.dataset.push_to_hub:
             if dataset and dataset.num_episodes > 0:

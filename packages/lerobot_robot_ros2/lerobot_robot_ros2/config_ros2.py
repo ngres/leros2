@@ -12,19 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from leros2.robot_config import ROS2RobotConfig
+from dataclasses import dataclass, field
+
 from lerobot.robots.config import RobotConfig
 
-from dataclasses import dataclass
+from leros2.components.common import StateComponentConfig, ActionComponentConfig
+from leros2.robot_config import ROS2RobotConfig
 
 
 @RobotConfig.register_subclass("ros2")
 @dataclass
 class ROS2Config(ROS2RobotConfig):
-    """Configuration for the ROS2 robot."""
+    """Configuration for a generic, component-driven ROS 2 robot.
 
-    joint_state_topic: str = "joint_state"
+    The robot is assembled from two lists of component configs:
 
-    joint_trajectory_topic: str = "scaled_joint_trajectory_topic/joint_trajectory"
+    - ``state`` components map ROS 2 topics to observation features.
+    - ``action`` components map action features to ROS 2 topics/action goals.
 
-    prefix: str = "ure"
+    Each entry is a ``draccus`` choice type discriminated by a ``type`` key
+    (e.g. ``joint_state``, ``pose_action``); see ``leros2.components``.
+    """
+
+    # Observation-producing components (subscriptions).
+    state: list[StateComponentConfig] = field(default_factory=list)
+
+    # Action-consuming components (publishers / action clients).
+    action: list[ActionComponentConfig] = field(default_factory=list)
