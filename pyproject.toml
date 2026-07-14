@@ -57,5 +57,15 @@ lerobot_robot_ros2 = { path = "packages/lerobot_robot_ros2", editable = true }
 lerobot_teleoperator_ros2 = { path = "packages/lerobot_teleoperator_ros2", editable = true }
 
 
+[tool.pixi.feature.publish.dependencies]
+uv = ">=0.9.10"
+
+[tool.pixi.feature.publish.tasks]
+clean-dist = { cmd = "rm -rf dist" }
+# Build sdists + wheels for the main package and every packages/* member into dist/.
+# Examples are intentionally excluded.
+build-dist = { cmd = "uv build --out-dir dist . && uv build --out-dir dist packages/lerobot_robot_ros2 && uv build --out-dir dist packages/lerobot_teleoperator_ros2", depends-on = ["clean-dist"] }
+
 [tool.pixi.environments]
 jazzy = ["jazzy"]
+publish = { features = ["publish"], no-default-feature = true }
