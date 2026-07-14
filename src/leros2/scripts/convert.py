@@ -233,6 +233,14 @@ class DatasetConverter:
         self._has_frame = False
         self._is_recording = False
 
+    def _delete_episode(self):
+        if not self._is_recording:
+            return
+        self.dataset.clear_episode_buffer()
+        self._last_timestamp = 0
+        self._has_frame = False
+        self._is_recording = False
+
     @cached_property
     def topics(self) -> list[str]:
         return [
@@ -290,9 +298,9 @@ class DatasetConverter:
                         self._save_episode()
                         self._tasked_received = False
                         continue
-                    case "rerecord_episode":
-                        print("Rerecording episode...")
-                        self._save_episode()
+                    case "delete_episode" | "rerecord_episode":
+                        print("Deleting episode...")
+                        self._delete_episode()
                         continue
                     case _:
                         continue
