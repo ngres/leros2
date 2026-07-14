@@ -17,110 +17,72 @@ git clone https://github.com/ngres/leros2.git
 cd leros2
 ```
 
-## Robot
+## Config
 
-A [LeRobot robot](https://github.com/huggingface/lerobot/blob/main/src/lerobot/robots/robot.py) outputs observations such as joint states and publishes actions in the form of joint trajectories.
+A [LeRobot robot](https://github.com/huggingface/lerobot/blob/main/src/lerobot/robots/robot.py) outputs observations such as joint states and publishes actions in the form of joint trajectories. A ROS 2 LeRobot robot consists of _components_ that subscribe to topics (`StateComponent`) and publish ROS 2 messages (`ActionComponent`).
 
-A ROS 2 LeRobot robot consists of _components_ that subscribe to topics (`StateComponent`) and publish ROS 2 messages (`ActionComponent`).
+A [LeRobot teleoperator](https://github.com/huggingface/lerobot/blob/main/src/lerobot/teleoperators/teleoperator.py) subscribes to a teleportation device (e.g. leader arm, VR controller).
 
-```python
-# file: lerobot_robot_ur/ur.py
+```yaml
+robot:
+  type: ros2
+  state:
+    - type: pose_state
+      name: pose
+      topic: /cartesian_controller/current_pose
+    - type: joint_state
+      topic: /joint_states
+      joints:
+        # instead of end-effector poses, joint configurations could also be added as states
+        - {
+            name: gripper,
+            ros_name: robotiq_85_left_knuckle_joint,
+            range_min: 0.0,
+            range_max: 0.8,
+            norm_min: 0.0,
+          }
+    - type: wrench_state
+      name: wrench # end-effector force/torque observations
+      topic: /force_torque_sensor_broadcaster/wrench
 
-from leros2.robot import ROS2Robot
-from leros2.components.joint_action import (
-    JointActionComponent,
-    JointActionComponentConfig,
-)
-from leros2.components.joint_state import (
-    JointStateComponent,
-    JointStateComponentConfig,
-    JointConfig,
-)
-import math
+    - type: compressed_image
+      name: wrist
+      topic: /wrist/color/image_raw/compressed
+      width: 512
+      height: 512
+    - type: compressed_image
+      name: base
+      topic: /base/color/image_raw/compressed
+      width: 640
+      height: 480
 
-from .config_ur import URConfig
+  action:
+    - type: pose_action
+      name: pose
+      topic: /cartesian_controller/target_pose
+      frame_id: base_link
+    - type: float_array_action
+      topic: /gripper_controller/external_commands
+      joints:
+        - { name: gripper, range_min: 0.0, range_max: 0.8, norm_min: 0.0 }
 
-class UR(ROS2Robot):
-    """Robot class for a Universal Robots e-series robot arm."""
-
-    name = "ur"
-
-    def __init__(self, config: URConfig):
-        joints = [
-            JointConfig(
-                name="shoulder_pan_joint",
-            ),
-            JointConfig(
-                name="shoulder_lift_joint",
-                range_min=-math.pi / 2,
-                range_max=math.pi / 2,
-            ),
-            JointConfig(
-                name="elbow_joint"
-            ),
-            JointConfig(
-                name="wrist_1_joint",
-            ),
-            JointConfig(
-                name="wrist_2_joint",
-            ),
-            JointConfig(
-                name="wrist_3_joint",
-            ),
-        ]
-
-        super().__init__(
-            config,
-            [
-                JointStateComponent(  # Read joint state
-                    JointStateComponentConfig(
-                        topic=config.joint_state_topic, joints=joints
-                    )
-                ),
-                JointActionComponent(  # Send joint trajectory
-                    JointActionComponentConfig(
-                        topic=config.joint_trajectory_topic, joints=joints
-                    )
-                ),
-                ImageComponent(
-                    ImageComponentConfig(
-                        topic=config.wrist_image_topic,
-                        width=config.wrist_image_width,
-                        height=config.wrist_image_height,
-                    )
-                ),
-            ],
-        )
+teleop:
+  type: ros2
+  action:
+    - type: pose_state
+      name: pose
+      topic: /cartesian_controller/target_pose
+    - type: joint_state
+      topic: /gripper_controller/commands
+      joints:
+        - {
+            name: gripper,
+            ros_name: robotiq_85_left_knuckle_joint,
+            range_min: 0.0,
+            range_max: 0.8,
+            norm_min: 0.0,
+          }
 ```
-
-For LeRobot to recognize you need place your robot class in a python package prefixed with `lerobot_robot_` and register the associated config file.
-
-```python
-# file: lerobot_robot_ur/config_ur.py
-
-from dataclasses import dataclass
-from lerobot_robot_ros2 import ROS2RobotConfig
-from lerobot.robots.config import RobotConfig
-
-@RobotConfig.register_subclass("ur")
-@dataclass
-class URConfig(ROS2RobotConfig):
-    """Configuration for the UR e-series robot arm."""
-
-    joint_state_topic: str = "joint_state"
-    joint_trajectory_topic: str = "scaled_joint_trajectory_topic/joint_trajectory"
-    wrist_image_topic: str = "wrist_camera/image_raw"
-    wrist_image_width: int = 640
-    wrist_image_height: int = 480
-```
-
-Read more about creating custom LeRobot devices [here](https://huggingface.co/docs/lerobot/en/integrate_hardware#using-your-own-lerobot-devices-) or explore the [examples](./examples).
-
-## Teleoperator
-
-A [LeRobot teleoperator](https://github.com/huggingface/lerobot/blob/main/src/lerobot/teleoperators/teleoperator.py) retrieves actions from a teleportation device such as a leader arm or a VR controller.
-
-A teleoperator can simply extend the `ROS2Teleoperator` class and initilize all state components.
 
 ## `rosbag2` Conversion
 
@@ -137,13 +99,11 @@ If multiple episodes are performed during the recording a `task_topic` should be
 
 ```shell
 leros2-convert \
-    --robot.type=ure \
-    --dataset.repo_id=<my_username>/<my_dataset_name> \
-    --input_bag=/path/to/your/rosbag \
-    --task_topic=/task \
-    --clock_topic=/camera/image_raw \
-    --teleop.type=ure \
-    --teleop.id=blue
+    --config_path /path/to/your/config.yaml
+    --dataset.repo_id <my_username>/<my_dataset_name> \
+    --dataset.fps 30 \
+    --input_bag /path/to/your/bag.mcap \
+    --task_topic /task \
 ```
 
 Checkout `leros2-convert --help` for more command options.
