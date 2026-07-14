@@ -94,7 +94,7 @@ LeROS2 is compatible with the `lerobot-record` command to capture LeRobot datase
 
 Therefore, it is recommended to connect the teleoperation device natively via ROS 2 (i.e. publish the action topics directly to the desired robot subscribers) and record each episode into a [ROS 2 bag](https://github.com/ros2/rosbag2#recording-data-).
 
-These raw recordings have the additional benefit of containing a higher temporal (i.e. native frequencies) and spacial (i.e. ) resolution.
+These raw recordings have the additional benefit of capturing the full temporal (i.e. native frequencies) and spacial (i.e. image resolution) resolution.
 
 ### `rosbag2` Conversion
 
