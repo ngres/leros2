@@ -8,22 +8,19 @@ Integrate any [ROS 2](https://www.ros.org/) robot or teleoperation device with [
 
 📼 Convert ROS 2 bags into LeRobot datasets
 
-## Quick Start
+## Quick Start (Inference)
 
-Clone the repository and sync dependencies.
+1. Install the LeRobot support package wrapping LeROS2:
 
 ```shell
-git clone https://github.com/ngres/leros2.git
-cd leros2
+uv add lerobot-robot-ros2 lerobot-teleoperator-ros2
 ```
 
-## Config
-
-A [LeRobot robot](https://github.com/huggingface/lerobot/blob/main/src/lerobot/robots/robot.py) outputs observations such as joint states and publishes actions in the form of joint trajectories. A ROS 2 LeRobot robot consists of _components_ that subscribe to topics (`StateComponent`) and publish ROS 2 messages (`ActionComponent`).
-
-A [LeRobot teleoperator](https://github.com/huggingface/lerobot/blob/main/src/lerobot/teleoperators/teleoperator.py) subscribes to a teleportation device (e.g. leader arm, VR controller).
+2. Create a config file, mapping your topics and actions to LeRobot features:
 
 ```yaml
+# file: my-config.yaml
+
 robot:
   type: ros2
   state:
@@ -41,9 +38,6 @@ robot:
             range_max: 0.8,
             norm_min: 0.0,
           }
-    - type: wrench_state
-      name: wrench # end-effector force/torque observations
-      topic: /force_torque_sensor_broadcaster/wrench
 
     - type: compressed_image
       name: wrist
@@ -84,7 +78,29 @@ teleop:
           }
 ```
 
-## `rosbag2` Conversion
+3. Deploy the policy:
+
+```shell
+lerobot-rollout \
+    --config-path=./my-config.yaml
+    --strategy.type=base \
+    --policy.path=${HF_USER}/my_policy \
+    --task="pick up cube" \
+```
+
+## Recording
+
+LeROS2 is compatible with the `lerobot-record` command to capture LeRobot datasets directly. However, this requires places the bordon of mirroring the teleportation device actions on the LeRobot Python record loop, which can introduce additional latency.
+
+Therefore, it is recommended to connect the teleoperation device natively via ROS 2 (i.e. publish the action topics directly to the desired robot subscribers) and record each episode into a [ROS 2 bag](https://github.com/ros2/rosbag2#recording-data-).
+
+These raw recordings have the additional benefit of containing a higher temporal (i.e. native frequencies) and spacial (i.e. ) resolution.
+
+### `rosbag2` Conversion
+
+```
+uv add leros2[dataset]
+```
 
 This package provides a `rosbag2` converter to convert ROS 2 bag files to LeRobot datasets via the `leros2-convert` command. It behaves similar to the `lerobot-record` command-line tool and accepts all robots and teleoperators that extends the `ROS2Robot` and `ROS2Teleoperator` classes respectively.
 
@@ -93,17 +109,24 @@ ROS 2 messages need to be quantized into dataset frames. This can be done using 
 - `--dataset.fps`: Use a fixed FPS rate to capture frames.
 - `--clock_topic`: Use a ROS 2 topic to capture frames every time a message is published. (`--dataset.fps` should also be specified to populate the FPS metadata)
 
-### Multi Episode Example
+#### Multi Episode Example
 
-If multiple episodes are performed during the recording a `task_topic` should be specified. After each string message published with the task description the converter will create a new episode. If no `task_topic` is specified, only one episode will be created.
+If multiple episodes are performed inside a single bag a `task_topic` should be specified. After each string message published with the task description the converter will create a new episode. If no `task_topic` is specified, only one episode will be created.
 
 ```shell
 leros2-convert \
-    --config_path /path/to/your/config.yaml
-    --dataset.repo_id <my_username>/<my_dataset_name> \
-    --dataset.fps 30 \
-    --input_bag /path/to/your/bag.mcap \
-    --task_topic /task \
+    --config_path=./my-config.yaml
+    --dataset.repo_id=${HF_USER}/my_dataset \
+    --input_bag=/path/to/your/bag.mcap \
+```
+
+Alternatively, a glob can be specified, to convert multiple bags containing each one episode into a single dataset:
+
+```shell
+leros2-convert \
+    --config_path=./my-config.yaml
+    --dataset.repo_id=${HF_USER}/my_dataset \
+    --input_bag=./recordings/episodes/*/*.mcap \
 ```
 
 Checkout `leros2-convert --help` for more command options.
