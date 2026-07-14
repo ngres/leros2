@@ -8,7 +8,7 @@ dependencies = [
     "black>=25.11.0",
     "cv-bridge>=1.13.0.post0",
     "draccus>=0.10.0",
-    "lerobot>=0.5.1,<0.5.2"
+    "lerobot>=0.6.0,<0.7.0"
 ]
 
 [tool.uv.workspace]

@@ -34,20 +34,20 @@ class WrenchStateComponent(StateComponent[WrenchStateComponentConfig, WrenchStam
     @property
     def features(self) -> dict[str, type | tuple[type, ...]]:
         return {
-            f"{self._config.name}_x.force": float,
-            f"{self._config.name}_y.force": float,
-            f"{self._config.name}_z.force": float,
-            f"{self._config.name}_x.torque": float,
-            f"{self._config.name}_y.torque": float,
-            f"{self._config.name}_z.torque": float,
+            f"{self._config.name}.force.x": float,
+            f"{self._config.name}.force.y": float,
+            f"{self._config.name}.force.z": float,
+            f"{self._config.name}.torque.x": float,
+            f"{self._config.name}.torque.y": float,
+            f"{self._config.name}.torque.z": float,
         }
 
     def to_value(self, msg: WrenchStamped) -> dict[str, Any]:
         return {
-            f"{self._config.name}_x.force": msg.wrench.force.x,
-            f"{self._config.name}_y.force": msg.wrench.force.y,
-            f"{self._config.name}_z.force": msg.wrench.force.z,
-            f"{self._config.name}_x.torque": msg.wrench.torque.x,
-            f"{self._config.name}_y.torque": msg.wrench.torque.y,
-            f"{self._config.name}_z.torque": msg.wrench.torque.z,
+            f"{self._config.name}.force.x": msg.wrench.force.x,
+            f"{self._config.name}.force.y": msg.wrench.force.y,
+            f"{self._config.name}.force.z": msg.wrench.force.z,
+            f"{self._config.name}.torque.x": msg.wrench.torque.x,
+            f"{self._config.name}.torque.y": msg.wrench.torque.y,
+            f"{self._config.name}.torque.z": msg.wrench.torque.z,
         }

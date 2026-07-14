@@ -36,13 +36,13 @@ class PoseActionComponent(ActionTopicComponent[PoseActionComponentConfig, PoseSt
     @property
     def features(self) -> dict[str, type | tuple[type, ...]]:
         return {
-            f"{self._config.name}_x.pos": float,
-            f"{self._config.name}_y.pos": float,
-            f"{self._config.name}_z.pos": float,
-            f"{self._config.name}_x.quat": float,
-            f"{self._config.name}_y.quat": float,
-            f"{self._config.name}_z.quat": float,
-            f"{self._config.name}_w.quat": float,
+            f"{self._config.name}.pos.x": float,
+            f"{self._config.name}.pos.y": float,
+            f"{self._config.name}.pos.z": float,
+            f"{self._config.name}.quat.x": float,
+            f"{self._config.name}.quat.y": float,
+            f"{self._config.name}.quat.z": float,
+            f"{self._config.name}.quat.w": float,
         }
 
     def to_message(self, action: dict[str, Any]) -> PoseStamped:
@@ -52,13 +52,13 @@ class PoseActionComponent(ActionTopicComponent[PoseActionComponentConfig, PoseSt
             msg.header.stamp = self._node.get_clock().now().to_msg()
         msg.header.frame_id = self._config.frame_id
 
-        msg.pose.position.x = action[f"{self._config.name}_x.pos"]
-        msg.pose.position.y = action[f"{self._config.name}_y.pos"]
-        msg.pose.position.z = action[f"{self._config.name}_z.pos"]
+        msg.pose.position.x = action[f"{self._config.name}.pos.x"]
+        msg.pose.position.y = action[f"{self._config.name}.pos.y"]
+        msg.pose.position.z = action[f"{self._config.name}.pos.z"]
 
-        msg.pose.orientation.x = action[f"{self._config.name}_x.quat"]
-        msg.pose.orientation.y = action[f"{self._config.name}_y.quat"]
-        msg.pose.orientation.z = action[f"{self._config.name}_z.quat"]
-        msg.pose.orientation.w = action[f"{self._config.name}_w.quat"]
+        msg.pose.orientation.x = action[f"{self._config.name}.quat.x"]
+        msg.pose.orientation.y = action[f"{self._config.name}.quat.y"]
+        msg.pose.orientation.z = action[f"{self._config.name}.quat.z"]
+        msg.pose.orientation.w = action[f"{self._config.name}.quat.w"]
 
         return msg

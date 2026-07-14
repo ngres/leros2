@@ -36,12 +36,12 @@ class WrenchActionComponent(
     @property
     def features(self) -> dict[str, type | tuple[type, ...]]:
         return {
-            f"{self._config.name}_x.force": float,
-            f"{self._config.name}_y.force": float,
-            f"{self._config.name}_z.force": float,
-            f"{self._config.name}_x.torque": float,
-            f"{self._config.name}_y.torque": float,
-            f"{self._config.name}_z.torque": float,
+            f"{self._config.name}.force.x": float,
+            f"{self._config.name}.force.y": float,
+            f"{self._config.name}.force.z": float,
+            f"{self._config.name}.torque.x": float,
+            f"{self._config.name}.torque.y": float,
+            f"{self._config.name}.torque.z": float,
         }
 
     def to_message(self, action: dict[str, Any]) -> WrenchStamped:
@@ -49,10 +49,10 @@ class WrenchActionComponent(
         if self._node:
             msg.header.stamp = self._node.get_clock().now().to_msg()
         msg.header.frame_id = self._config.frame_id
-        msg.wrench.force.x = action[f"{self._config.name}_x.force"]
-        msg.wrench.force.y = action[f"{self._config.name}_y.force"]
-        msg.wrench.force.z = action[f"{self._config.name}_z.force"]
-        msg.wrench.torque.x = action[f"{self._config.name}_x.torque"]
-        msg.wrench.torque.y = action[f"{self._config.name}_y.torque"]
-        msg.wrench.torque.z = action[f"{self._config.name}_z.torque"]
+        msg.wrench.force.x = action[f"{self._config.name}.force.x"]
+        msg.wrench.force.y = action[f"{self._config.name}.force.y"]
+        msg.wrench.force.z = action[f"{self._config.name}.force.z"]
+        msg.wrench.torque.x = action[f"{self._config.name}.torque.x"]
+        msg.wrench.torque.y = action[f"{self._config.name}.torque.y"]
+        msg.wrench.torque.z = action[f"{self._config.name}.torque.z"]
         return msg
