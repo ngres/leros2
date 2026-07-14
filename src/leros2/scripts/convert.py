@@ -35,7 +35,7 @@ from packaging.utils import _
 from lerobot.teleoperators.utils import make_teleoperator_from_config
 from lerobot.robots.utils import make_robot_from_config
 
-from rosidl_runtime_py.utilities import get_message  # ty:ignore[unresolved-import]
+from mcap_ros2.reader import read_ros2_messages
 
 from leros2.teleoperator import ROS2Teleoperator
 from leros2.robot import ROS2Robot
@@ -79,9 +79,6 @@ from lerobot.datasets.image_writer import safe_stop_image_writer
 from lerobot.utils.constants import HF_LEROBOT_HOME
 import os
 from shutil import rmtree
-
-import rosbag2_py  # ty:ignore[unresolved-import]
-from rclpy.serialization import deserialize_message  # ty:ignore[unresolved-import]
 
 
 @dataclass
@@ -204,25 +201,13 @@ class DatasetConverter:
         self.single_task = single_task
         self.max_episodes = max_episodes
 
-    _raw_topic_data: dict[str, Any] = {}
-    _parsed_topic_data: dict[str, Any] = {}
+    _topic_data: dict[str, Any] = {}
     _task: str | None = None
     _is_recording = False
     _has_frame = False
     _last_timestamp = 0
     _tasked_received = task_topic is None
     _num_episodes = 0
-    _topic_types = []
-
-    def _typename(self, topic_name):
-        for topic_type in self._topic_types:
-            if topic_type.name == topic_name:
-                return topic_type.type
-        raise ValueError(f"topic {topic_name} not in bag")
-
-    def _deserialize_data(self, topic, data):
-        msg_type = get_message(self._typename(topic))
-        return deserialize_message(data, msg_type)
 
     def _save_episode(self):
         if not self._is_recording or not self._has_frame:
@@ -257,33 +242,23 @@ class DatasetConverter:
 
     @safe_stop_image_writer
     def convert(self, bag_path: str):
-        reader = rosbag2_py.SequentialReader()
-        reader.open(
-            rosbag2_py.StorageOptions(uri=bag_path, storage_id="mcap"),
-            rosbag2_py.ConverterOptions(
-                input_serialization_format="cdr", output_serialization_format="cdr"
-            ),
-        )
-        reader.set_filter(rosbag2_py.StorageFilter(topics=self.topics))
-
-        self._topic_types = reader.get_all_topics_and_types()
         self._task = self.single_task
 
-        while reader.has_next():
+        for msg in read_ros2_messages(bag_path, topics=self.topics):
             if self.max_episodes and self._num_episodes >= self.max_episodes:
                 return
 
-            topic, data, timestamp = reader.read_next()
+            topic = msg.channel.topic
+            timestamp = msg.log_time_ns
+            ros_msg = msg.ros_msg
 
-            self._raw_topic_data[topic] = data
-            self._parsed_topic_data.pop(topic, None) # Removed parsed message from cache
+            self._topic_data[topic] = ros_msg
 
             # Check for task messages
             if self.task_topic is not None and topic == self.task_topic:
                 # Receive a new task to record
-                msg = self._deserialize_data(topic, data)
                 if self.single_task is None:
-                    self._task = msg.data
+                    self._task = ros_msg.data
                 print(f"episode {self._num_episodes} - new task: {self._task}")
                 # Save the previous episode (if recorded)
                 self._save_episode()
@@ -292,8 +267,7 @@ class DatasetConverter:
 
             # Check for event messages
             if self.event_topic is not None and topic == self.event_topic:
-                msg = self._deserialize_data(topic, data)
-                match msg.data:
+                match ros_msg.data:
                     case "exit_early":
                         self._save_episode()
                         self._tasked_received = False
@@ -306,7 +280,7 @@ class DatasetConverter:
                         continue
 
             if not self._is_recording:
-                if self._tasked_received and all(t in self._raw_topic_data for t in self.topics if t != self.event_topic and t != self.task_topic):
+                if self._tasked_received and all(t in self._topic_data for t in self.topics if t != self.event_topic and t != self.task_topic):
                     # Only start recording after all topics received a message
                     self._is_recording = True
                 else:
@@ -322,13 +296,8 @@ class DatasetConverter:
                 if topic != self.clock_topic:
                     continue
 
-            # Parse all messages for the new frame
-            for t, data in self._raw_topic_data.items():
-                if t not in self._parsed_topic_data:
-                    self._parsed_topic_data[t] = self._deserialize_data(t, data)
-
             # Get robot observation
-            obs = self.robot.get_state_from_topics(self._parsed_topic_data)
+            obs = self.robot.get_state_from_topics(self._topic_data)
 
             # Applies a pipeline to the raw robot observation, default is IdentityProcessor
             obs_processed = self.robot_observation_processor(obs)
@@ -338,7 +307,7 @@ class DatasetConverter:
             )
 
             # Get action from teleop
-            act = self.teleop.get_state_from_topics(self._parsed_topic_data)
+            act = self.teleop.get_state_from_topics(self._topic_data)
 
             # Applies a pipeline to the action, default is IdentityProcessor
             action_values = self.teleop_action_processor((act, obs))
