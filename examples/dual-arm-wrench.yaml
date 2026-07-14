@@ -1,0 +1,115 @@
+dataset:
+  repo_id: ngres/leros2-test
+  single_task: "test"
+  fps: 50
+  push_to_hub: true
+  streaming_encoding: true
+  rgb_encoder:
+    vcodec: auto
+
+robot:
+  type: ros2
+  node_name: lerobot_robot
+  state:
+    - type: pose_state
+      name: left_pose
+      topic: /left/cartesian_compliance_controller/current_pose
+    - type: wrench_state
+      name: left_wrench
+      topic: /left/force_torque_sensor_broadcaster/wrench
+    - type: joint_state
+      topic: /left/joint_states
+      joints:
+        - {
+            name: left_gripper,
+            ros_name: left_finger_joint,
+            range_min: 0.0,
+            range_max: 0.8,
+            norm_min: 0.0,
+          }
+    - type: compressed_image
+      name: left_wrist
+      topic: /left/ueye_left/color/image_raw/compressed
+      width: 512
+      height: 512
+
+    - type: pose_state
+      name: right_pose
+      topic: /right/cartesian_compliance_controller/current_pose
+    - type: wrench_state
+      name: right_wrench
+      topic: /right/force_torque_sensor_broadcaster/wrench
+    - type: joint_state
+      topic: /right/joint_states
+      joints:
+        - {
+            name: right_gripper,
+            ros_name: right_finger_joint,
+            range_min: 0.0,
+            range_max: 0.8,
+            norm_min: 0.0,
+          }
+    - type: compressed_image
+      name: right_wrist
+      topic: /right/ueye_right/color/image_raw/compressed
+      width: 512
+      height: 512
+
+    - type: compressed_image
+      name: base
+      topic: /base/color/image_raw/compressed
+      width: 640
+      height: 480
+
+  action:
+    - type: pose_action
+      name: left_pose
+      topic: /left/external_pose
+      frame_id: left_base_link
+    - type: wrench_action
+      name: left_wrench
+      topic: /left/cartesian_compliance_controller/target_wrench_alt
+      frame_id: left_base_link
+    - type: float_array_action
+      topic: /left/gripper_controller/external_commands
+      joints:
+        - { name: left_gripper, range_min: 0.0, range_max: 0.8, norm_min: 0.0 }
+
+    - type: pose_action
+      name: right_pose
+      topic: /right/external_pose
+      frame_id: right_base_link
+    - type: wrench_action
+      name: right_wrench
+      topic: /right/cartesian_compliance_controller/target_wrench_alt
+      frame_id: right_base_link
+    - type: float_array_action
+      topic: /right/gripper_controller/external_commands
+      joints:
+        - { name: right_gripper, range_min: 0.0, range_max: 0.8, norm_min: 0.0 }
+
+teleop:
+  type: ros2
+  node_name: lerobot_teleop
+  action:
+    - type: pose_state
+      name: left_pose
+      topic: /left/target_pose
+    - type: wrench_state
+      name: left_wrench
+      topic: /left/cartesian_compliance_controller/compliance_wrench
+    - type: float_array_state
+      topic: /left/gripper_controller/commands
+      joints:
+        - { name: left_gripper, range_min: 0.0, range_max: 0.8, norm_min: 0.0 }
+
+    - type: pose_state
+      name: right_pose
+      topic: /right/target_pose
+    - type: wrench_state
+      name: right_wrench
+      topic: /right/cartesian_compliance_controller/compliance_wrench
+    - type: float_array_state
+      topic: /right/gripper_controller/commands
+      joints:
+        - { name: right_gripper, range_min: 0.0, range_max: 0.8, norm_min: 0.0 }
