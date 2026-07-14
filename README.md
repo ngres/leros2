@@ -90,7 +90,7 @@ lerobot-rollout \
 
 ## Recording
 
-LeROS2 is compatible with the `lerobot-record` command to capture LeRobot datasets directly. However, this requires places the bordon of mirroring the teleportation device actions on the LeRobot Python record loop, which can introduce additional latency.
+LeROS2 is compatible with the `lerobot-record` command to capture LeRobot datasets directly. However, this requires places the burden of mirroring the teleportation device actions on the LeRobot Python record loop, which can introduce additional latency.
 
 Therefore, it is recommended to connect the teleoperation device natively via ROS 2 (i.e. publish the action topics directly to the desired robot subscribers) and record each episode into a [ROS 2 bag](https://github.com/ros2/rosbag2#recording-data-).
 
