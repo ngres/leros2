@@ -3,12 +3,18 @@ name = "leros2"
 version = "0.1.0"
 description = "LeRobot ROS2 interfaces"
 readme = "README.md"
-requires-python = "==3.12.3"
+requires-python = ">=3.12"
 dependencies = [
     "black>=25.11.0",
     "cv-bridge>=1.13.0.post0",
     "draccus>=0.10.0",
-    "lerobot>=0.6.0,<0.7.0"
+    "lerobot>=0.6.0,<0.7.0",
+]
+
+[project.optional-dependencies]
+dataset = [
+    "lerobot[dataset]",
+    "mcap-ros2-support>=0.5.7,<0.6",
 ]
 
 [tool.uv.workspace]
@@ -41,6 +47,7 @@ setuptools = "<81.0.0"
 numpy = ">=2.0.0,<2.3.0"
 
 [tool.pixi.feature.jazzy.pypi-dependencies]
+leros2 = { path = ".", editable = true, extras = ["dataset"] }
 
 
 [tool.pixi.environments]

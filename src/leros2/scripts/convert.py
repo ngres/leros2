@@ -30,10 +30,6 @@ leros2-convert \
 ```
 """
 from functools import cached_property
-from packaging.utils import _
-
-from lerobot.teleoperators.utils import make_teleoperator_from_config
-from lerobot.robots.utils import make_robot_from_config
 
 from mcap_ros2.reader import read_ros2_messages
 
@@ -41,91 +37,38 @@ from leros2.teleoperator import ROS2Teleoperator
 from leros2.robot import ROS2Robot
 
 import logging
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from pprint import pformat
 from typing import Any
 
+from lerobot.common.control_utils import sanity_check_dataset_robot_compatibility
 from lerobot.configs import parser
-from lerobot.datasets.lerobot_dataset import LeRobotDataset
-from lerobot.datasets.pipeline_features import (
+from lerobot.configs.dataset import DatasetRecordConfig
+from lerobot.datasets import (
+    LeRobotDataset,
+    VideoEncodingManager,
     aggregate_pipeline_dataset_features,
     create_initial_features,
+    safe_stop_image_writer,
 )
-from lerobot.datasets.feature_utils import build_dataset_frame, combine_feature_dicts
-from lerobot.datasets.video_utils import VideoEncodingManager
 from lerobot.processor import (
     RobotAction,
     RobotObservation,
     RobotProcessorPipeline,
     make_default_processors,
 )
-from lerobot.robots import ( 
-    RobotConfig,
-)
-from lerobot.teleoperators import ( 
-    TeleoperatorConfig,
-)
-from lerobot.utils.constants import ACTION, OBS_STR
-from lerobot.utils.control_utils import (
-    sanity_check_dataset_robot_compatibility,
-)
+from lerobot.robots import RobotConfig, make_robot_from_config
+from lerobot.teleoperators import TeleoperatorConfig, make_teleoperator_from_config
+from lerobot.utils.constants import ACTION, OBS_STR, HF_LEROBOT_HOME
+from lerobot.utils.feature_utils import build_dataset_frame, combine_feature_dicts
 from lerobot.utils.import_utils import register_third_party_plugins
 from lerobot.utils.utils import (
     init_logging,
     log_say,
 )
-from lerobot.datasets.image_writer import safe_stop_image_writer
-from lerobot.utils.constants import HF_LEROBOT_HOME
 import os
 from shutil import rmtree
-
-
-@dataclass
-class DatasetRecordConfig:
-    # Dataset identifier. By convention it should match '{hf_username}/{dataset_name}' (e.g. `lerobot/test`).
-    repo_id: str
-    # Root directory where the dataset will be stored (e.g. 'dataset/path').
-    root: str | Path | None = None
-    # Limit the frames per second.
-    fps: int = 30
-    # Encode frames in the dataset into video
-    video: bool = True
-    # Upload dataset to Hugging Face hub.
-    push_to_hub: bool = True
-    # Upload on private repository on the Hugging Face hub.
-    private: bool = False
-    # A short but accurate description of the task performed during the recording (e.g. "Pick the Lego block and drop it in the box on the right.")
-    single_task: str | None = None
-    # Add tags to your dataset on the hub.
-    tags: list[str] | None = None
-    # Number of subprocesses handling the saving of frames as PNG. Set to 0 to use threads only;
-    # set to ≥1 to use subprocesses, each using threads to write images. The best number of processes
-    # and threads depends on your system. We recommend 4 threads per camera with 0 processes.
-    # If fps is unstable, adjust the thread count. If still unstable, try using 1 or more subprocesses.
-    num_image_writer_processes: int = 0
-    # Number of threads writing the frames as png images on disk, per camera.
-    # Too many threads might cause unstable teleoperation fps due to main thread being blocked.
-    # Not enough threads might cause low camera fps.
-    num_image_writer_threads_per_camera: int = 4
-    # Number of episodes to record before batch encoding videos
-    # Set to 1 for immediate encoding (default behavior), or higher for batched encoding
-    video_encoding_batch_size: int = 1
-    # Video codec for encoding videos. Options: 'h264', 'hevc', 'libsvtav1', 'auto',
-    # or hardware-specific: 'h264_videotoolbox', 'h264_nvenc', 'h264_vaapi', 'h264_qsv'.
-    # Use 'auto' to auto-detect the best available hardware encoder.
-    vcodec: str = "libsvtav1"
-    # Enable streaming video encoding: encode frames in real-time during capture instead
-    # of writing PNG images first. Makes save_episode() near-instant. More info in the documentation: https://huggingface.co/docs/lerobot/streaming_video_encoding
-    streaming_encoding: bool = False
-    # Maximum number of frames to buffer per camera when using streaming encoding.
-    # ~1s buffer at 30fps. Provides backpressure if the encoder can't keep up.
-    encoder_queue_maxsize: int = 30
-    # Number of threads per encoder instance. None = auto (codec default).
-    # Lower values reduce CPU usage, maps to 'lp' (via svtav1-params) for libsvtav1 and 'threads' for h264/hevc..
-    encoder_threads: int | None = None
-    # Rename map for the observation to override the image and state keys
-    rename_map: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -257,7 +200,7 @@ class DatasetConverter:
             # Check for task messages
             if self.task_topic is not None and topic == self.task_topic:
                 # Receive a new task to record
-                if self.single_task is None:
+                if not self.single_task:
                     self._task = ros_msg.data
                 print(f"episode {self._num_episodes} - new task: {self._task}")
                 # Save the previous episode (if recorded)
@@ -365,7 +308,8 @@ def convert(cfg: BaseConvertConfig, robot: ROS2Robot, teleop: ROS2Teleoperator) 
                 image_writer_processes=cfg.dataset.num_image_writer_processes,
                 image_writer_threads=image_writer_threads,
                 batch_encoding_size=cfg.dataset.video_encoding_batch_size,
-                vcodec=cfg.dataset.vcodec,
+                rgb_encoder=cfg.dataset.rgb_encoder,
+                depth_encoder=cfg.dataset.depth_encoder,
                 streaming_encoding=cfg.dataset.streaming_encoding,
                 encoder_queue_maxsize=cfg.dataset.encoder_queue_maxsize,
                 encoder_threads=cfg.dataset.encoder_threads,
@@ -396,7 +340,8 @@ def convert(cfg: BaseConvertConfig, robot: ROS2Robot, teleop: ROS2Teleoperator) 
                 image_writer_processes=cfg.dataset.num_image_writer_processes,
                 image_writer_threads=image_writer_threads,
                 batch_encoding_size=cfg.dataset.video_encoding_batch_size,
-                vcodec=cfg.dataset.vcodec,
+                rgb_encoder=cfg.dataset.rgb_encoder,
+                depth_encoder=cfg.dataset.depth_encoder,
                 streaming_encoding=cfg.dataset.streaming_encoding,
                 encoder_queue_maxsize=cfg.dataset.encoder_queue_maxsize,
                 encoder_threads=cfg.dataset.encoder_threads,
