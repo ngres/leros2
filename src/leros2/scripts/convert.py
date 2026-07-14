@@ -32,7 +32,7 @@ leros2-convert \
 from functools import cached_property
 
 from mcap.reader import make_reader
-from mcap_ros2.reader import read_ros2_messages
+from mcap_ros2.decoder import DecoderFactory
 from tqdm import tqdm
 
 from leros2.teleoperator import ROS2Teleoperator
@@ -102,6 +102,27 @@ class ConvertConfig(BaseConvertConfig):
     teleop: TeleoperatorConfig
 
 
+class _LazyMessage:
+    """Defers CDR decoding of a bag message until its value is actually needed.
+
+    Decoding ``sensor_msgs/Image`` is the most expensive step in the pipeline, so
+    messages that get dropped between frame triggers should never be decoded. The
+    decoded value is cached so a message spanning two frames is only decoded once.
+    """
+
+    __slots__ = ("_decoder", "_data", "_msg")
+
+    def __init__(self, decoder, data):
+        self._decoder = decoder
+        self._data = data
+        self._msg = None
+
+    def get(self):
+        if self._msg is None:
+            self._msg = self._decoder(self._data)
+        return self._msg
+
+
 class DatasetConverter:
 
     robot: ROS2Robot
@@ -146,13 +167,13 @@ class DatasetConverter:
         self.single_task = single_task
         self.max_episodes = max_episodes
 
-    _topic_data: dict[str, Any] = {}
-    _task: str | None = None
-    _is_recording = False
-    _has_frame = False
-    _last_timestamp = 0
-    _tasked_received = task_topic is None
-    _num_episodes = 0
+        self._topic_data: dict[str, _LazyMessage] = {}
+        self._task: str | None = None
+        self._is_recording = False
+        self._has_frame = False
+        self._last_timestamp = 0
+        self._tasked_received = task_topic is None
+        self._num_episodes = 0
 
     def _save_episode(self):
         if not self._is_recording or not self._has_frame:
@@ -202,32 +223,48 @@ class DatasetConverter:
             and channel.topic in topics
         )
 
+    def _iter_messages(self, bag_path: str):
+        """Yield ``(topic, log_time_ns, _LazyMessage)`` without eagerly decoding.
+
+        Uses the raw mcap reader so that expensive CDR decoding (images in
+        particular) only happens for messages we decide to keep.
+        """
+        factory = DecoderFactory()
+        decoders: dict[int, Any] = {}
+        with open(bag_path, "rb") as f:
+            for schema, channel, message in make_reader(f).iter_messages(
+                topics=self.topics
+            ):
+                decoder = decoders.get(schema.id)
+                if decoder is None:
+                    decoder = factory.decoder_for(channel.message_encoding, schema)
+                    decoders[schema.id] = decoder
+                yield channel.topic, message.log_time, _LazyMessage(
+                    decoder, message.data
+                )
+
     @safe_stop_image_writer
     def convert(self, bag_path: str):
         self._task = self.single_task
 
         total = self._count_messages(bag_path)
         messages = tqdm(
-            read_ros2_messages(bag_path, topics=self.topics),
+            self._iter_messages(bag_path),
             total=total,
             unit="msg",
             desc="Converting bag",
         )
-        for msg in messages:
+        for topic, timestamp, lazy_msg in messages:
             if self.max_episodes and self._num_episodes >= self.max_episodes:
                 return
 
-            topic = msg.channel.topic
-            timestamp = msg.log_time_ns
-            ros_msg = msg.ros_msg
-
-            self._topic_data[topic] = ros_msg
+            self._topic_data[topic] = lazy_msg
 
             # Check for task messages
             if self.task_topic is not None and topic == self.task_topic:
                 # Receive a new task to record
                 if not self.single_task:
-                    self._task = ros_msg.data
+                    self._task = lazy_msg.get().data
                 print(f"episode {self._num_episodes} - new task: {self._task}")
                 # Save the previous episode (if recorded)
                 self._save_episode()
@@ -236,7 +273,7 @@ class DatasetConverter:
 
             # Check for event messages
             if self.event_topic is not None and topic == self.event_topic:
-                match ros_msg.data:
+                match lazy_msg.get().data:
                     case "exit_early":
                         self._save_episode()
                         self._tasked_received = False
@@ -265,8 +302,18 @@ class DatasetConverter:
                 if topic != self.clock_topic:
                     continue
 
+            # Decode only now that we've committed to emitting a frame. Skip the
+            # control topics: the clock in particular only needs to have arrived,
+            # never to be decoded.
+            control_topics = (self.clock_topic, self.event_topic, self.task_topic)
+            decoded = {
+                t: lazy.get()
+                for t, lazy in self._topic_data.items()
+                if t not in control_topics
+            }
+
             # Get robot observation
-            obs = self.robot.get_state_from_topics(self._topic_data)
+            obs = self.robot.get_state_from_topics(decoded)
 
             # Applies a pipeline to the raw robot observation, default is IdentityProcessor
             obs_processed = self.robot_observation_processor(obs)
@@ -276,7 +323,7 @@ class DatasetConverter:
             )
 
             # Get action from teleop
-            act = self.teleop.get_state_from_topics(self._topic_data)
+            act = self.teleop.get_state_from_topics(decoded)
 
             # Applies a pipeline to the action, default is IdentityProcessor
             action_values = self.teleop_action_processor((act, obs))
