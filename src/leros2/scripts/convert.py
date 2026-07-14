@@ -80,7 +80,7 @@ class BaseConvertConfig:
     # Dataset config
     dataset: DatasetRecordConfig
     # ROS 2 Event topic
-    event_topic: str = "lerobot_event"
+    event_topic: str | None = None
     # ROS 2 topic name with task descriptions (eache message will start a new episode in the dataset)
     task_topic: str | None = None
     # ROS 2 Clock topic (used to capture lerobot frames - if None, messages will be sampled at a fixed FPS rate)
@@ -206,8 +206,13 @@ class DatasetConverter:
             if t is not None
         ]
 
-    def _count_messages(self, bag_path: str) -> int | None:
-        """Sum message counts for the subscribed topics from the mcap summary statistics."""
+    def _topic_message_counts(self, bag_path: str) -> dict[str, int] | None:
+        """Map each subscribed/control topic to its message count from the mcap summary.
+
+        Returns ``None`` if the summary is unavailable (e.g. a truncated or
+        corrupted bag with no summary section). Topics that appear nowhere in the
+        bag are reported with a count of ``0``.
+        """
         try:
             with open(bag_path, "rb") as f:
                 summary = make_reader(f).get_summary()
@@ -215,13 +220,33 @@ class DatasetConverter:
             return None
         if summary is None or summary.statistics is None:
             return None
-        topics = set(self.topics)
-        return sum(
-            count
-            for channel_id, count in summary.statistics.channel_message_counts.items()
-            if (channel := summary.channels.get(channel_id)) is not None
-            and channel.topic in topics
-        )
+        counts = {t: 0 for t in self.topics}
+        for channel_id, count in summary.statistics.channel_message_counts.items():
+            channel = summary.channels.get(channel_id)
+            if channel is not None and channel.topic in counts:
+                counts[channel.topic] += count
+        return counts
+
+    def _warn_missing_topics(self, counts: dict[str, int] | None) -> None:
+        """Warn about expected topics that carry no messages in the bag.
+
+        A subscribed topic that never appears keeps ``_is_recording`` from ever
+        being set (recording only starts once every subscription topic has been
+        seen), which silently produces zero episodes.
+        """
+        if counts is None:
+            logging.warning(
+                "Could not read the bag summary — the file may be truncated or "
+                "corrupted. Missing topics cannot be detected up front."
+            )
+            return
+        for topic in self.topics:
+            if counts.get(topic, 0) == 0:
+                logging.warning(
+                    f"Topic '{topic}' has no messages in the bag. "
+                    "If it is a robot/teleop state topic, recording will never "
+                    "start and no episodes will be saved."
+                )
 
     def _iter_messages(self, bag_path: str):
         """Yield ``(topic, log_time_ns, _LazyMessage)`` without eagerly decoding.
@@ -247,7 +272,9 @@ class DatasetConverter:
     def convert(self, bag_path: str):
         self._task = self.single_task
 
-        total = self._count_messages(bag_path)
+        counts = self._topic_message_counts(bag_path)
+        self._warn_missing_topics(counts)
+        total = sum(counts.values()) if counts is not None else None
         messages = tqdm(
             self._iter_messages(bag_path),
             total=total,
