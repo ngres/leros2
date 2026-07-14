@@ -38,6 +38,7 @@ from tqdm import tqdm
 from leros2.teleoperator import ROS2Teleoperator
 from leros2.robot import ROS2Robot
 
+import glob
 import logging
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -75,7 +76,9 @@ from shutil import rmtree
 
 @dataclass
 class BaseConvertConfig:
-    # Path to the bag file to convert
+    # Path to the bag file to convert. May contain a glob (e.g. "/data/*.mcap")
+    # to merge multiple bags into a single dataset. Without a task_topic, each
+    # matched bag becomes one episode.
     bag_path: str
     # Dataset config
     dataset: DatasetRecordConfig
@@ -268,9 +271,35 @@ class DatasetConverter:
                     decoder, message.data
                 )
 
+    def _reset_bag_state(self):
+        """Reset per-bag buffering so each bag starts as a fresh recording.
+
+        Topic buffers and timestamps are cleared so recording only (re)starts
+        once every topic has been seen again in the new bag. Without a task
+        topic, ``_tasked_received`` stays ``True`` so each bag records fully and
+        is saved as a single episode.
+        """
+        self._topic_data = {}
+        self._last_timestamp = 0
+        self._tasked_received = self.task_topic is None
+
     @safe_stop_image_writer
-    def convert(self, bag_path: str):
+    def convert(self, bag_paths: list[str]):
         self._task = self.single_task
+
+        multi = len(bag_paths) > 1
+        bags = tqdm(bag_paths, unit="bag", desc="Bags", position=0) if multi else None
+        for bag_path in bag_paths:
+            if self.max_episodes and self._num_episodes >= self.max_episodes:
+                break
+            self._convert_bag(bag_path, nested=multi)
+            if bags is not None:
+                bags.update(1)
+        if bags is not None:
+            bags.close()
+
+    def _convert_bag(self, bag_path: str, nested: bool = False):
+        self._reset_bag_state()
 
         counts = self._topic_message_counts(bag_path)
         self._warn_missing_topics(counts)
@@ -279,7 +308,9 @@ class DatasetConverter:
             self._iter_messages(bag_path),
             total=total,
             unit="msg",
-            desc="Converting bag",
+            desc=f"Converting {Path(bag_path).name}",
+            position=1 if nested else 0,
+            leave=not nested,
         )
         for topic, timestamp, lazy_msg in messages:
             if self.max_episodes and self._num_episodes >= self.max_episodes:
@@ -367,9 +398,22 @@ class DatasetConverter:
         if self._has_frame:
             self._save_episode()
 
+def _resolve_bag_paths(bag_path: str) -> list[str]:
+    """Expand a possibly-glob bag path into a sorted list of bag files."""
+    if any(c in bag_path for c in "*?[]"):
+        matches = sorted(p for p in glob.glob(bag_path, recursive=True) if os.path.isfile(p))
+        return matches
+    return [bag_path]
+
+
 def convert(cfg: BaseConvertConfig, robot: ROS2Robot, teleop: ROS2Teleoperator) -> LeRobotDataset | None:
     init_logging()
     logging.info(pformat(asdict(cfg)))
+
+    bag_paths = _resolve_bag_paths(cfg.bag_path)
+    if not bag_paths:
+        raise FileNotFoundError(f"No bag files matched '{cfg.bag_path}'")
+    logging.info(f"Converting {len(bag_paths)} bag(s) into dataset '{cfg.dataset.repo_id}'")
 
     teleop_action_processor, _robot_action_processor, robot_observation_processor = (
         make_default_processors()
@@ -459,7 +503,7 @@ def convert(cfg: BaseConvertConfig, robot: ROS2Robot, teleop: ROS2Teleoperator) 
                 single_task=cfg.dataset.single_task,
                 max_episodes=cfg.max_episodes
             )
-            converter.convert(bag_path=cfg.bag_path)
+            converter.convert(bag_paths=bag_paths)
     finally:
         log_say("Conversion finished", cfg.play_sounds, blocking=True)
 
