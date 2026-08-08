@@ -31,6 +31,7 @@ leros2-convert \
 """
 from functools import cached_property
 
+from mcap.exceptions import McapError
 from mcap.reader import make_reader
 from mcap_ros2.decoder import DecoderFactory
 from tqdm import tqdm
@@ -219,7 +220,7 @@ class DatasetConverter:
         try:
             with open(bag_path, "rb") as f:
                 summary = make_reader(f).get_summary()
-        except (OSError, ValueError):
+        except (OSError, ValueError, McapError):
             return None
         if summary is None or summary.statistics is None:
             return None
@@ -260,15 +261,29 @@ class DatasetConverter:
         factory = DecoderFactory()
         decoders: dict[int, Any] = {}
         with open(bag_path, "rb") as f:
-            for schema, channel, message in make_reader(f).iter_messages(
-                topics=self.topics
-            ):
-                decoder = decoders.get(schema.id)
-                if decoder is None:
-                    decoder = factory.decoder_for(channel.message_encoding, schema)
-                    decoders[schema.id] = decoder
-                yield channel.topic, message.log_time, _LazyMessage(
-                    decoder, message.data
+            try:
+                for schema, channel, message in make_reader(f).iter_messages(
+                    topics=self.topics
+                ):
+                    decoder = decoders.get(schema.id)
+                    if decoder is None:
+                        decoder = factory.decoder_for(channel.message_encoding, schema)
+                        decoders[schema.id] = decoder
+                    yield channel.topic, message.log_time, _LazyMessage(
+                        decoder, message.data
+                    )
+            except McapError as e:
+                # A missing/empty summary (e.g. the recorder never wrote a
+                # footer) makes the mcap library fall back to a linear scan
+                # from byte 0; if the bag is truncated or otherwise corrupted
+                # partway through, that scan desyncs from record boundaries
+                # and raises here. Treat this as "end of usable data" rather
+                # than aborting the whole conversion, so messages already
+                # read from this bag are kept instead of discarded.
+                logging.warning(
+                    f"Stopped reading '{bag_path}' early: {e}. The bag is likely "
+                    "truncated or corrupted (e.g. recording wasn't stopped "
+                    "cleanly); messages read before this point are kept."
                 )
 
     def _reset_bag_state(self):
@@ -406,7 +421,14 @@ def _resolve_bag_paths(bag_path: str) -> list[str]:
     return [bag_path]
 
 
-def convert(cfg: BaseConvertConfig, robot: ROS2Robot, teleop: ROS2Teleoperator) -> LeRobotDataset | None:
+def convert(
+    cfg: BaseConvertConfig,
+    robot: ROS2Robot,
+    teleop: ROS2Teleoperator,
+    teleop_action_processor: RobotProcessorPipeline[tuple[RobotAction, RobotObservation], RobotAction]
+    | None = None,
+    robot_observation_processor: RobotProcessorPipeline[RobotObservation, RobotObservation] | None = None,
+) -> LeRobotDataset | None:
     init_logging()
     logging.info(pformat(asdict(cfg)))
 
@@ -415,9 +437,11 @@ def convert(cfg: BaseConvertConfig, robot: ROS2Robot, teleop: ROS2Teleoperator) 
         raise FileNotFoundError(f"No bag files matched '{cfg.bag_path}'")
     logging.info(f"Converting {len(bag_paths)} bag(s) into dataset '{cfg.dataset.repo_id}'")
 
-    teleop_action_processor, _robot_action_processor, robot_observation_processor = (
-        make_default_processors()
-    )
+    # Fall back to identity pipelines when the caller doesn't supply processors.
+    if teleop_action_processor is None or robot_observation_processor is None:
+        _t, _r, _o = make_default_processors()
+        teleop_action_processor = teleop_action_processor or _t
+        robot_observation_processor = robot_observation_processor or _o
 
     dataset_features = combine_feature_dicts(
         aggregate_pipeline_dataset_features(
@@ -521,7 +545,12 @@ def convert(cfg: BaseConvertConfig, robot: ROS2Robot, teleop: ROS2Teleoperator) 
 
 
 @parser.wrap()
-def convert_cfg(cfg: ConvertConfig) -> LeRobotDataset | None:
+def convert_cfg(
+    cfg: ConvertConfig,
+    teleop_action_processor: RobotProcessorPipeline[tuple[RobotAction, RobotObservation], RobotAction]
+    | None = None,
+    robot_observation_processor: RobotProcessorPipeline[RobotObservation, RobotObservation] | None = None,
+) -> LeRobotDataset | None:
     init_logging()
     logging.info(pformat(asdict(cfg)))
 
@@ -532,7 +561,7 @@ def convert_cfg(cfg: ConvertConfig) -> LeRobotDataset | None:
     if not isinstance(teleop, ROS2Teleoperator):
         raise ValueError("Teleoperator must extend ROS2Teleoperator")
 
-    return convert(cfg, robot, teleop)
+    return convert(cfg, robot, teleop, teleop_action_processor, robot_observation_processor)
 
 
 def main():
