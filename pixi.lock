@@ -7035,8 +7035,8 @@ packages:
   - black>=25.11.0
   - cv-bridge>=1.13.0.post0
   - draccus>=0.10.0
-  - lerobot @ ../lerobot
-  - lerobot[dataset] @ ../lerobot ; extra == 'dataset'
+  - lerobot>=0.6.0,<0.7.0
+  - lerobot[dataset] ; extra == 'dataset'
   - mcap-ros2-support>=0.5.7,<0.6 ; extra == 'dataset'
   requires_python: '>=3.12'
 - pypi: ../lerobot
@@ -9371,10 +9371,10 @@ packages:
 - pypi: packages/lerobot_robot_ros2
   name: lerobot-robot-ros2
   requires_dist:
-  - leros2 @ file:///home/tamer/checkout/ws_xact/xact/packages/leros2
+  - leros2 @ file:///home/tamer/checkout/xact/packages/leros2
   requires_python: '>=3.10'
 - pypi: packages/lerobot_teleoperator_ros2
   name: lerobot-teleoperator-ros2
   requires_dist:
-  - leros2 @ file:///home/tamer/checkout/ws_xact/xact/packages/leros2
+  - leros2 @ file:///home/tamer/checkout/xact/packages/leros2
   requires_python: '>=3.10'

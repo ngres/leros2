@@ -12,16 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from dataclasses import dataclass
+from typing import Any
 
 from geometry_msgs.msg import PoseStamped
-from typing import Any
+
 from leros2.components.common import ActionComponentConfig, ActionTopicComponent
 from leros2.components.common.base import BaseComponentConfig
 from leros2.components.common.rotation import RotationRepresentation
 
 
 @dataclass
-@BaseComponentConfig.register_subclass('pose_action')
+@BaseComponentConfig.register_subclass("pose_action")
 class PoseActionComponentConfig(ActionComponentConfig):
     # name to identify the pose component
     name: str

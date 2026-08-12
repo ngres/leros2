@@ -53,6 +53,17 @@ class PoseStateComponent(StateComponent[PoseStateComponentConfig, PoseStamped]):
             **self._rotation.features(name),
         }
 
+    def default_value(self) -> dict[str, Any]:
+        # The identity quaternion, not zeros: a zero rotation is not a valid one
+        # and its rot6d columns cannot be orthonormalized on the way back out.
+        name = self._config.name
+        return {
+            f"{name}.pos.x": 0.0,
+            f"{name}.pos.y": 0.0,
+            f"{name}.pos.z": 0.0,
+            **self._rotation.encode(name, (0.0, 0.0, 0.0, 1.0)),
+        }
+
     def to_value(self, msg: PoseStamped) -> dict[str, Any]:
         name = self._config.name
         orientation = msg.pose.orientation

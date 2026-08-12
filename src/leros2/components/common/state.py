@@ -14,6 +14,7 @@
 
 from dataclasses import dataclass
 
+import logging
 from abc import abstractmethod
 from typing import Any, Generic, TypeVar
 from numpy.typing import NDArray
@@ -21,6 +22,9 @@ from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 
 from .base import BaseComponent, BaseComponentConfig
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -41,6 +45,7 @@ class StateComponent(BaseComponent[StateConfigT], Generic[StateConfigT, MsgT]):
 
         self._msg_type: type[MsgT] = msg_type
         self._value: dict[str, Any] | NDArray[Any] | None = None
+        self._warned_no_message = False
 
     @abstractmethod
     def to_value(self, msg: MsgT) -> dict[str, Any] | NDArray[Any]:
@@ -53,6 +58,17 @@ class StateComponent(BaseComponent[StateConfigT], Generic[StateConfigT, MsgT]):
             The state features.
         """
         raise NotImplementedError
+
+    def default_value(self) -> dict[str, Any] | NDArray[Any]:
+        """The state features to report before the first message has arrived.
+
+        Subclasses whose features have no meaningful zero (a rotation, an image
+        buffer, a normalized joint range) override this.
+
+        Returns:
+            The default state features.
+        """
+        return {key: 0.0 for key in self.features}
 
     def connect(self, node: Node) -> None:
         """Connect the component, subscribing to the state topic.
@@ -89,6 +105,10 @@ class StateComponent(BaseComponent[StateConfigT], Generic[StateConfigT, MsgT]):
     def get_state(self) -> dict[str, Any] | NDArray[Any]:
         """Get the state features.
 
+        Falls back to :meth:`default_value` until the first message arrives, so
+        a publisher that is still starting up delays inference rather than
+        aborting it.
+
         Returns:
             The state features.
         """
@@ -96,7 +116,12 @@ class StateComponent(BaseComponent[StateConfigT], Generic[StateConfigT, MsgT]):
         if msg is not None:
             self._value = self.to_value(msg)
         if self._value is None:
-            raise ValueError(f"No message received on topic {self.topic}")
+            if not self._warned_no_message:
+                logger.warning(
+                    f"No message received on topic {self.topic}, using default values"
+                )
+                self._warned_no_message = True
+            return self.default_value()
         return self._value
 
     def _take(self) -> MsgT | None:
