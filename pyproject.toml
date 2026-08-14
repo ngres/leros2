@@ -52,6 +52,9 @@ numpy = ">=2.0.0,<2.3.0"
 KMP_DUPLICATE_LIB_OK = "TRUE"
 
 [tool.pixi.feature.jazzy.pypi-dependencies]
+# pixi resolves pypi-dependencies itself and does not read [tool.uv.sources],
+# so the local lerobot checkout needs to be repeated here for `pixi install`/`pixi lock`.
+lerobot = { path = "../lerobot", editable = true, extras = ["dataset"] }
 leros2 = { path = ".", editable = true, extras = ["dataset"] }
 lerobot_robot_ros2 = { path = "packages/lerobot_robot_ros2", editable = true }
 lerobot_teleoperator_ros2 = { path = "packages/lerobot_teleoperator_ros2", editable = true }

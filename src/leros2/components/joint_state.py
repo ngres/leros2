@@ -90,6 +90,11 @@ class JointStateComponent(StateComponent[JointStateComponentConfig, JointState])
 
         return features
 
+    def default_value(self) -> dict[str, Any]:
+        return {
+            f"{joint.name}.pos": joint.normalize(0.0) for joint in self._joints.values()
+        }
+
     def to_value(self, msg: JointState) -> dict[str, Any]:
         value: dict[str, Any] = {}
 

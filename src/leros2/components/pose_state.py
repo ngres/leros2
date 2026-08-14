@@ -17,38 +17,61 @@ from geometry_msgs.msg import PoseStamped
 from typing import Any
 from leros2.components.common import StateComponentConfig
 from leros2.components.common.base import BaseComponentConfig
+from leros2.components.common.rotation import RotationRepresentation
 from dataclasses import dataclass
 
 
 @dataclass
 @BaseComponentConfig.register_subclass('pose_state')
 class PoseStateComponentConfig(StateComponentConfig):
+    # name to identify the pose component
     name: str
+
+    # representation of the orientation features (see ``RotationRepresentation``)
+    rotation: RotationRepresentation = RotationRepresentation.QUATERNION
 
 
 class PoseStateComponent(StateComponent[PoseStateComponentConfig, PoseStamped]):
+    """Adapter for converting a ROS 2 ``PoseStamped`` to a feature value dictionary.
+
+    The position is exposed as ``<name>.pos.{x,y,z}``; the orientation keys
+    depend on the configured :class:`RotationRepresentation`.
+    """
+
     def __init__(self, config: PoseStateComponentConfig):
         super().__init__(config, PoseStamped)
 
+        self._rotation = config.rotation.encoding
+
     @property
     def features(self) -> dict[str, type | tuple[type, ...]]:
+        name = self._config.name
         return {
-            f"{self._config.name}.pos.x": float,
-            f"{self._config.name}.pos.y": float,
-            f"{self._config.name}.pos.z": float,
-            f"{self._config.name}.quat.x": float,
-            f"{self._config.name}.quat.y": float,
-            f"{self._config.name}.quat.z": float,
-            f"{self._config.name}.quat.w": float,
+            f"{name}.pos.x": float,
+            f"{name}.pos.y": float,
+            f"{name}.pos.z": float,
+            **self._rotation.features(name),
+        }
+
+    def default_value(self) -> dict[str, Any]:
+        # The identity quaternion, not zeros: a zero rotation is not a valid one
+        # and its rot6d columns cannot be orthonormalized on the way back out.
+        name = self._config.name
+        return {
+            f"{name}.pos.x": 0.0,
+            f"{name}.pos.y": 0.0,
+            f"{name}.pos.z": 0.0,
+            **self._rotation.encode(name, (0.0, 0.0, 0.0, 1.0)),
         }
 
     def to_value(self, msg: PoseStamped) -> dict[str, Any]:
+        name = self._config.name
+        orientation = msg.pose.orientation
         return {
-            f"{self._config.name}.pos.x": msg.pose.position.x,
-            f"{self._config.name}.pos.y": msg.pose.position.y,
-            f"{self._config.name}.pos.z": msg.pose.position.z,
-            f"{self._config.name}.quat.x": msg.pose.orientation.x,
-            f"{self._config.name}.quat.y": msg.pose.orientation.y,
-            f"{self._config.name}.quat.z": msg.pose.orientation.z,
-            f"{self._config.name}.quat.w": msg.pose.orientation.w,
+            f"{name}.pos.x": msg.pose.position.x,
+            f"{name}.pos.y": msg.pose.position.y,
+            f"{name}.pos.z": msg.pose.position.z,
+            **self._rotation.encode(
+                name, (orientation.x, orientation.y, orientation.z, orientation.w)
+            ),
         }
