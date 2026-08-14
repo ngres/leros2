@@ -74,14 +74,12 @@ class StateComponent(BaseComponent[StateConfigT], Generic[StateConfigT, MsgT]):
         """Connect the component, subscribing to the state topic.
 
         The subscription uses a depth-1 KEEP_LAST queue as the latest-message
-        buffer, which ``get_state`` polls directly via ``_take``. The owning
-        node must NOT be added to an executor: a spinning executor would consume
-        the message first, leaving ``_take`` to always return ``None``. If
-        callbacks are needed elsewhere, this component requires a dedicated,
-        un-spun ``Node``.
+        buffer, which ``get_state`` polls directly via ``_take``. Polling at the
+        control rate avoids deserializing every sample of a topic that publishes
+        faster than the loop consumes it.
 
         Args:
-            node: The node to connect to.
+            node: The node to connect to. It must NOT be added to an executor.
         """
         super().connect(node)
 

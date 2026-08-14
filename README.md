@@ -10,11 +10,16 @@ Integrate any [ROS 2](https://www.ros.org/) robot or teleoperation device with [
 
 ## Quick Start (Inference)
 
-1. Install the LeRobot support package wrapping LeROS2:
+1. Install the LeRobot support packages wrapping LeROS2 from source:
 
 ```shell
-uv add lerobot-robot-ros2 lerobot-teleoperator-ros2
+uv add \
+    "lerobot-robot-ros2 @ git+https://github.com/ngres/leros2#subdirectory=packages/lerobot_robot_ros2" \
+    "lerobot-teleoperator-ros2 @ git+https://github.com/ngres/leros2#subdirectory=packages/lerobot_teleoperator_ros2"
 ```
+
+Both packages pull `leros2` itself from the same checkout. Append `@<branch>`
+or `@<tag>` to the repository URL to pin a revision.
 
 2. Create a config file, mapping your topics and actions to LeRobot features:
 
@@ -98,8 +103,8 @@ These raw recordings have the additional benefit of capturing the full temporal 
 
 ### `rosbag2` Conversion
 
-```
-uv add leros2[dataset]
+```shell
+uv add "leros2[dataset] @ git+https://github.com/ngres/leros2"
 ```
 
 This package provides a `rosbag2` converter to convert ROS 2 bag files to LeRobot datasets via the `leros2-convert` command. It behaves similar to the `lerobot-record` command-line tool and accepts all robots and teleoperators that extends the `ROS2Robot` and `ROS2Teleoperator` classes respectively.

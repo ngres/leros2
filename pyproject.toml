@@ -45,6 +45,7 @@ ros-jazzy-geometry-msgs = "*"
 packaging = "<26.0"
 setuptools = "<81.0.0"
 numpy = ">=2.0.0,<2.3.0"
+pytest = ">=8.0"
 
 [tool.pixi.feature.jazzy.activation.env]
 # torch bundles its own libomp.dylib alongside conda's llvm-openmp; both are the
