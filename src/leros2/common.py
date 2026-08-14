@@ -41,6 +41,7 @@ class ROS2Common(Generic[ConfigT, ComponentT]):
         self.config = config
         self._is_connected = False
         self._node = None
+        self._state_node = None
         self._executor = None
         self._spin_thread = None
 
@@ -74,11 +75,20 @@ class ROS2Common(Generic[ConfigT, ComponentT]):
 
     @property
     def node(self):
+        """The spinning node, owning publishers, action clients and cameras."""
         if not self._node:
             raise RuntimeError("Node is not initialized. Call connect() first.")
         return self._node
 
+    @property
+    def state_node(self):
+        """The un-spun node, owning the polled state subscriptions."""
+        if not self._state_node:
+            raise RuntimeError("Node is not initialized. Call connect() first.")
+        return self._state_node
+
     def connect(self) -> None:
+        """Connect to ROS 2, creating the nodes and starting the executor."""
         if self.is_connected:
             raise DeviceAlreadyConnectedError(f"{self} already connected")
 
@@ -86,9 +96,11 @@ class ROS2Common(Generic[ConfigT, ComponentT]):
             rclpy.init()
 
         self._node = rclpy.create_node(self.config.node_name)
+        self._state_node = rclpy.create_node(f"{self.config.node_name}_state")
 
         for comp in self._components:
-            comp.connect(self._node)
+            is_state = isinstance(comp, StateComponent)
+            comp.connect(self._state_node if is_state else self._node)
 
         self._executor = MultiThreadedExecutor()
         self._executor.add_node(self._node)
@@ -111,6 +123,8 @@ class ROS2Common(Generic[ConfigT, ComponentT]):
             self._spin_thread.join()
         if self._node:
             self._node.destroy_node()
+        if self._state_node:
+            self._state_node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
 
